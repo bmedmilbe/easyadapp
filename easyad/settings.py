@@ -40,6 +40,8 @@ INSTALLED_APPS = [
     
     # Third party
     'rest_framework',
+    'rest_framework.authtoken',  # For token authentication
+    'djoser',
     'corsheaders',
     
     # Local apps
@@ -47,7 +49,7 @@ INSTALLED_APPS = [
     'ads',
 ]
 
-AUTH_USER_MODEL = 'core.User'
+AUTH_USER_MODEL = 'core.CustomUser'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -58,11 +60,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'core.middleware.EasyFlowMiddleware',  
 ]
 
 ROOT_URLCONF = 'easyad.urls'
-
+CORS_ORIGIN_ALLOW_ALL = True
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -83,13 +84,17 @@ WSGI_APPLICATION = 'easyad.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'easyaddb',
+        'HOST': 'localhost',
+        'USER': 'postgres',
+        'PASSWORD': 'postgres',
+        'PORT': '5432',
     }
 }
+
 
 
 # Password validation
@@ -132,3 +137,38 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+}
+
+DJOSER = {
+    'USER_CREATE_PASSWORD_RETYPE': False,
+    'USERNAME_CHANGED_EMAIL_CONFIRMATION': False,
+    'PASSWORD_CHANGED_EMAIL_CONFIRMATION': False,
+    'SEND_CONFIRMATION_EMAIL': False,
+    'SEND_ACTIVATION_EMAIL': False,
+    'SET_USERNAME_RETYPE': False,
+    'SET_PASSWORD_RETYPE': False,
+    'PASSWORD_RESET_CONFIRM_URL': 'password-reset/{uid}/{token}',
+    'USERNAME_RESET_CONFIRM_URL': 'username-reset/{uid}/{token}',
+    'ACTIVATION_URL': 'activate/{uid}/{token}',
+    'USER_ID_FIELD': 'id',
+    'SERIALIZERS': {
+        'user_create': 'core.serializers.CustomUserCreateSerializer',
+        'user': 'core.serializers.CustomUserSerializer',
+        'current_user': 'core.serializers.CustomUserSerializer',
+        'user_delete': 'djoser.serializers.UserDeleteSerializer',
+    },
+    'TOKEN_MODEL': 'rest_framework.authtoken.models.Token',  # Use Token model
+}
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+]
