@@ -1,73 +1,76 @@
-# core/admin.py
+
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.utils.translation import gettext_lazy as _
 
-from .models import (
-    District,
-    SessionManager,
-    SiteConfiguration,
-    SystemLog,
-    User,
-    UserProfile,
-)
+from .models import CustomUser
 
 
-@admin.register(District)
-class DistrictAdmin(admin.ModelAdmin):
-    list_display = ['name', 'code', 'is_diaspora']
-    search_fields = ['name', 'code']
-    list_filter = ['is_diaspora']
-
-
-class UserProfileInline(admin.StackedInline):
-    model = UserProfile
-    can_delete = False
-    verbose_name_plural = 'Profile'
-
-
-@admin.register(User)
-class UserAdmin(BaseUserAdmin):
-    list_display = ['phone_number', 'name', 'district', 'is_verified', 'is_active']
-    search_fields = ['phone_number', 'name']
-    list_filter = ['is_verified', 'is_active', 'district']
+class CustomUserAdmin(BaseUserAdmin):
+    """
+    Custom admin configuration for the CustomUser model.
+    """
     
-    fieldsets = (
-        (None, {'fields': ('phone_number', 'password')}),
-        ('Personal Info', {'fields': ('name', 'district')}),
-        ('PIN', {'fields': ('pin_code', 'pin_created_at', 'is_verified')}),
-        ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
-        ('Important Dates', {'fields': ('last_login', 'date_joined')}),
+    # Display fields in the list view
+    list_display = (
+        'mobile_number', 
+        'district', 
+        'is_active', 
+        'is_staff', 
+        'is_superuser',
+        'date_joined'
     )
     
-    add_fieldsets = (
+    # Fields for filtering in the sidebar
+    list_filter = (
+        'district',
+        'is_active',
+        'is_staff',
+        'is_superuser',
+        'date_joined'
+    )
+    
+    # Search fields
+    search_fields = ('mobile_number',)
+    
+    # Ordering
+    ordering = ('-date_joined',)
+    
+    # Fieldsets for the detail/edit view
+    fieldsets = (
         (None, {
-            'classes': ('wide',),
-            'fields': ('phone_number', 'name', 'district', 'password1', 'password2'),
+            'fields': ('mobile_number', 'district', 'password')
+        }),
+        (_('Permissions'), {
+            'fields': (
+                'is_active', 
+                'is_staff', 
+                'is_superuser',
+                'groups',
+                'user_permissions'
+            ),
+        }),
+        (_('Important dates'), {
+            'fields': ('last_login', 'date_joined')
         }),
     )
     
-    ordering = ['-date_joined']
-    inlines = [UserProfileInline]
+    # Fieldsets for adding a new user
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('mobile_number', 'district', 'password1', 'password2'),
+        }),
+    )
+    
+    readonly_fields = ('date_joined',)
+    
+    def get_queryset(self, request):
+        """
+        Optimize queryset with select_related for better performance.
+        """
+        return super().get_queryset(request).select_related('profile')
 
 
-@admin.register(SystemLog)
-class SystemLogAdmin(admin.ModelAdmin):
-    list_display = ['type', 'user', 'message', 'created_at']
-    list_filter = ['type', 'created_at']
-    search_fields = ['message', 'user__name', 'user__phone_number']
-    readonly_fields = ['created_at']
-
-
-@admin.register(SiteConfiguration)
-class SiteConfigurationAdmin(admin.ModelAdmin):
-    def has_add_permission(self, request):
-        if SiteConfiguration.objects.exists():
-            return False
-        return True
-
-
-@admin.register(SessionManager)
-class SessionManagerAdmin(admin.ModelAdmin):
-    list_display = ['session_key', 'user', 'expires_at', 'created_at']
-    list_filter = ['created_at', 'expires_at']
-    search_fields = ['session_key', 'user__name', 'user__phone_number']
+# Register the custom user model with the custom admin
+admin.site.register(CustomUser, CustomUserAdmin)
