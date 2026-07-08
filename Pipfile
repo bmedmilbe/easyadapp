@@ -8,6 +8,9 @@ django = "*"
 djangorestframework = "==3.17.1"
 django-cors-headers = "==4.9.0"
 pillow = "*"
+psycopg2-binary = "==2.9.0"
+djoser = "==2.3.3"
+drf-nested-routers = "==0.95.0"
 
 [dev-packages]
 
