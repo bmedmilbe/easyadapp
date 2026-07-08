@@ -1,366 +1,271 @@
 # ads/models.py
 import uuid
+from datetime import timedelta
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
 
+class CustomerProfile(models.Model):
+    """
+    Customer profile model that links to the user model via OneToOneField.
+    This is the ONLY model that directly links to the user model.
+    """
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='profile'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Customer Profile'
+        verbose_name_plural = 'Customer Profiles'
+    
+    def __str__(self):
+        return f"Profile for {self.user.mobile_number}"
+    
+    @property
+    def whatsapp_link(self):
+        """
+        Returns a sanitized WhatsApp link for the user's mobile number.
+        """
+        if not self.user.mobile_number:
+            return '#'
+        
+        # Remove any non-numeric characters from the mobile number
+        clean_number = ''.join(filter(str.isdigit, self.user.mobile_number))
+        
+        # Remove any leading zeros or country code indicators
+        if clean_number.startswith('0'):
+            clean_number = clean_number[1:]
+        
+        # If the number doesn't have a country code, add the São Tomé and Príncipe code
+        if not clean_number.startswith('239'):
+            clean_number = '239' + clean_number
+        
+        return f"https://wa.me/{clean_number}"
+
+
+# ads/models.py - Update Category model
 class Category(models.Model):
-    name = models.CharField('Category Name', max_length=100, unique=True)
-    slug = models.SlugField('Slug', max_length=100, unique=True)
-    icon = models.CharField('Icon (FontAwesome)', max_length=50, blank=True)
-    color = models.CharField('Color (hex)', max_length=7, default='#007bff')
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+    icon = models.CharField(max_length=10, blank=True, help_text="Emoji or icon for the category")
     parent = models.ForeignKey(
         'self',
         on_delete=models.CASCADE,
         null=True,
         blank=True,
-        related_name='subcategories',
-        verbose_name='Parent Category'
+        related_name='subcategories'
     )
-    is_active = models.BooleanField('Is Active?', default=True)
-    order = models.PositiveIntegerField('Order', default=0)
-    
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         verbose_name = 'Category'
         verbose_name_plural = 'Categories'
-        ordering = ['order', 'name']
+        ordering = ['name']
     
     def __str__(self):
-        if self.parent:
-            return f"{self.parent.name} › {self.name}"
-        return self.name
-    
-    @property
-    def is_subcategory(self):
-        return self.parent is not None
+        return f"{self.icon or '📁'} {self.name}"
 
 
-class Advertisement(models.Model):
-    STATUS_CHOICES = [
-        ('draft', 'Draft'),
-        ('pending', 'Pending'),
-        ('active', 'Active'),
-        ('suspended', 'Suspended'),
-        ('expired', 'Expired'),
-        ('rejected', 'Rejected'),
-    ]
-    
-    HIGHLIGHT_CHOICES = [
-        ('none', 'No Highlight'),
-        ('basic', 'Basic Highlight'),
-        ('premium', 'Premium Highlight'),
-        ('featured', 'Featured Highlight'),
-    ]
-    
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+class AdStatus(models.TextChoices):
+    ACTIVE = 'ACTIVE', 'Active'
+    SUSPENDED = 'SUSPENDED', 'Suspended'
+    EXPIRED = 'EXPIRED', 'Expired'
+
+class AdCondition(models.TextChoices):
+    NEW = 'NEW', 'Novo'
+    USED = 'USED', 'Usado'
+    IMPORTED = 'IMPORTED', 'Importado'
+    LOCAL = 'LOCAL', 'Produzido em São Tomé'
+
+
+def default_expiration_date():
+    """
+    Returns a datetime 7 days from now.
+    """
+    return timezone.now() + timedelta(days=7)
+
+
+class Ad(models.Model):
+    """
+    Main ad model that links to CustomerProfile (not directly to User).
+    All ads are free and active by default.
+    """
+    customer = models.ForeignKey(
+        CustomerProfile,
         on_delete=models.CASCADE,
-        related_name='advertisements',
-        verbose_name='Advertiser'
+        related_name='ads'
     )
     category = models.ForeignKey(
         Category,
         on_delete=models.SET_NULL,
         null=True,
-        related_name='advertisements',
-        verbose_name='Category'
+        related_name='ads'
     )
+    condition = models.CharField(
+        max_length=20,
+        choices=AdCondition.choices,
+        default=AdCondition.NEW,
+        verbose_name="Condição do Produto"
+    )
+    product_name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     
-    title = models.CharField('Title', max_length=200)
-    description = models.TextField('Description', blank=True)
-    price = models.DecimalField('Price', max_digits=10, decimal_places=2, null=True, blank=True)
-    is_price_negotiable = models.BooleanField('Is Price Negotiable?', default=True)
-    
-    # Status and visibility
+    # Status and expiration
     status = models.CharField(
-        'Status',
         max_length=20,
-        choices=STATUS_CHOICES,
-        default='draft'
+        choices=AdStatus.choices,
+        default=AdStatus.ACTIVE
     )
-    highlight_type = models.CharField(
-        'Highlight Type',
-        max_length=20,
-        choices=HIGHLIGHT_CHOICES,
-        default='none'
-    )
-    views_count = models.PositiveIntegerField('Views', default=0)
-    whatsapp_clicks = models.PositiveIntegerField('WhatsApp Clicks', default=0)
+    expires_at = models.DateTimeField(default=default_expiration_date)
     
-    # Dates
-    created_at = models.DateTimeField('Created At', auto_now_add=True)
-    updated_at = models.DateTimeField('Updated At', auto_now=True)
-    published_at = models.DateTimeField('Published At', null=True, blank=True)
-    expiration_date = models.DateTimeField('Expiration Date', null=True, blank=True)
+    # Premium flag for featured listings
+    is_featured = models.BooleanField(default=False)
     
-    # EasyFlow fields
-    session_key = models.CharField('Session Key', max_length=100, null=True, blank=True)
-    is_anonymous = models.BooleanField('Is Anonymous?', default=True)
-    temp_user_data = models.JSONField('Temporary User Data', null=True, blank=True)
-    
-    # Tracking
-    ip_address = models.GenericIPAddressField('Creation IP', null=True, blank=True)
-    user_agent = models.TextField('User Agent', blank=True)
-    
-    class Meta:
-        verbose_name = 'Advertisement'
-        verbose_name_plural = 'Advertisements'
-        ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['status', 'expiration_date']),
-            models.Index(fields=['category', 'status']),
-            models.Index(fields=['user', 'status']),
-        ]
-    
-    def __str__(self):
-        return f"{self.title} - {self.user.name}"
-    
-    def save(self, *args, **kwargs):
-        if self.status == 'active' and not self.published_at:
-            self.published_at = timezone.now()
-            if not self.expiration_date:
-                self.expiration_date = timezone.now() + timezone.timedelta(days=30)
-        
-        super().save(*args, **kwargs)
-    
-    @property
-    def is_active(self):
-        if self.status != 'active':
-            return False
-        if self.expiration_date and timezone.now() > self.expiration_date:
-            self.status = 'expired'
-            self.save(update_fields=['status'])
-            return False
-        return True
-    
-    @property
-    def is_highlighted(self):
-        return self.highlight_type != 'none'
-    
-    @property
-    def days_remaining(self):
-        if not self.expiration_date:
-            return None
-        delta = self.expiration_date - timezone.now()
-        return max(0, delta.days)
-    
-    def get_whatsapp_link(self):
-        return self.user.get_whatsapp_link()
-    
-    def increment_views(self):
-        self.views_count += 1
-        self.save(update_fields=['views_count'])
-    
-    def increment_whatsapp_clicks(self):
-        self.whatsapp_clicks += 1
-        self.save(update_fields=['whatsapp_clicks'])
-    
-    def assign_to_user(self, user):
-        """Assign anonymous ad to a registered user"""
-        self.user = user
-        self.is_anonymous = False
-        self.session_key = None
-        self.save()
-        
-        # Update user profile stats
-        profile = user.profile
-        profile.total_ads += 1
-        profile.save()
-
-
-class AdvertisementImage(models.Model):
-    advertisement = models.ForeignKey(
-        Advertisement,
-        on_delete=models.CASCADE,
-        related_name='images',
-        verbose_name='Advertisement'
-    )
-    image = models.ImageField('Image', upload_to='ads/images/')
-    caption = models.CharField('Caption', max_length=200, blank=True)
-    order = models.PositiveIntegerField('Order', default=0)
-    is_primary = models.BooleanField('Is Primary?', default=False)
-    
+    # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        verbose_name = 'Advertisement Image'
-        verbose_name_plural = 'Advertisement Images'
-        ordering = ['order']
-        unique_together = [['advertisement', 'order']]
+        verbose_name = 'Ad'
+        verbose_name_plural = 'Ads'
+        ordering = ['-is_featured', '-created_at']  # Featured ads float to top
     
     def __str__(self):
-        return f"Image {self.order} of {self.advertisement.title}"
+        return f"{self.product_name} - {self.customer.user.mobile_number}"
+    
+    def is_expired(self):
+        """
+        Check if the ad has expired.
+        """
+        return timezone.now() >= self.expires_at
     
     def save(self, *args, **kwargs):
-        if self.is_primary:
-            AdvertisementImage.objects.filter(
-                advertisement=self.advertisement
-            ).exclude(pk=self.pk).update(is_primary=False)
+        """
+        Override save to automatically set status to EXPIRED if expired.
+        """
+        if self.is_expired():
+            self.status = AdStatus.EXPIRED
         super().save(*args, **kwargs)
 
 
-class AdvertisementView(models.Model):
-    advertisement = models.ForeignKey(
-        Advertisement,
+class AdImage(models.Model):
+    """
+    Model for storing multiple images per ad.
+    """
+    ad = models.ForeignKey(
+        Ad,
         on_delete=models.CASCADE,
-        related_name='views',
-        verbose_name='Advertisement'
+        related_name='images'
     )
-    ip_address = models.GenericIPAddressField('IP Address', null=True, blank=True)
-    user_agent = models.TextField('User Agent', blank=True)
-    session_key = models.CharField('Session Key', max_length=100, null=True, blank=True)
-    viewed_at = models.DateTimeField('Viewed At', auto_now_add=True)
+    image = models.ImageField(upload_to='ad_images/')
+    caption = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    order = models.PositiveIntegerField(default=0)
     
     class Meta:
-        verbose_name = 'Advertisement View'
-        verbose_name_plural = 'Advertisement Views'
-        ordering = ['-viewed_at']
+        verbose_name = 'Ad Image'
+        verbose_name_plural = 'Ad Images'
+        ordering = ['order', 'created_at']
     
     def __str__(self):
-        return f"View of {self.advertisement.title} at {self.viewed_at}"
+        return f"Image for {self.ad.product_name}"
 
 
-class AdvertisementClick(models.Model):
-    advertisement = models.ForeignKey(
-        Advertisement,
-        on_delete=models.CASCADE,
-        related_name='clicks',
-        verbose_name='Advertisement'
+class TemporaryAd(models.Model):
+    """
+    Temporary draft holding station for non-authenticated users.
+    No relationship to User or CustomerProfile.
+    """
+    session_token = models.UUIDField(default=uuid.uuid4, unique=True)
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='temporary_ads'
     )
-    ip_address = models.GenericIPAddressField('IP Address', null=True, blank=True)
-    user_agent = models.TextField('User Agent', blank=True)
-    session_key = models.CharField('Session Key', max_length=100, null=True, blank=True)
-    clicked_at = models.DateTimeField('Clicked At', auto_now_add=True)
-    success = models.BooleanField('Success?', default=True)
+    product_name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     
-    class Meta:
-        verbose_name = 'WhatsApp Click'
-        verbose_name_plural = 'WhatsApp Clicks'
-        ordering = ['-clicked_at']
-    
-    def __str__(self):
-        return f"Click on {self.advertisement.title} at {self.clicked_at}"
-
-
-class PaymentPlan(models.Model):
-    name = models.CharField('Plan Name', max_length=100)
-    description = models.TextField('Description', blank=True)
-    highlight_type = models.CharField(
-        'Highlight Type',
-        max_length=20,
-        choices=Advertisement.HIGHLIGHT_CHOICES
-    )
-    duration_days = models.PositiveIntegerField('Duration (days)')
-    price = models.DecimalField('Price', max_digits=10, decimal_places=2)
-    is_active = models.BooleanField('Is Active?', default=True)
-    features = models.JSONField('Features', default=dict, blank=True)
-    
+    # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        verbose_name = 'Payment Plan'
-        verbose_name_plural = 'Payment Plans'
-        ordering = ['price']
-    
-    def __str__(self):
-        return f"{self.name} - {self.price} STN"
-
-
-class Payment(models.Model):
-    PAYMENT_STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('paid', 'Paid'),
-        ('failed', 'Failed'),
-        ('refunded', 'Refunded'),
-    ]
-    
-    PAYMENT_METHOD_CHOICES = [
-        ('mobile_money', 'Mobile Money'),
-        ('bank_transfer', 'Bank Transfer'),
-        ('card', 'Card'),
-    ]
-    
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='payments',
-        verbose_name='User'
-    )
-    advertisement = models.ForeignKey(
-        Advertisement,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='payments',
-        verbose_name='Advertisement'
-    )
-    plan = models.ForeignKey(
-        PaymentPlan,
-        on_delete=models.SET_NULL,
-        null=True,
-        verbose_name='Plan'
-    )
-    
-    amount = models.DecimalField('Amount', max_digits=10, decimal_places=2)
-    payment_method = models.CharField(
-        'Payment Method',
-        max_length=20,
-        choices=PAYMENT_METHOD_CHOICES
-    )
-    status = models.CharField(
-        'Status',
-        max_length=20,
-        choices=PAYMENT_STATUS_CHOICES,
-        default='pending'
-    )
-    transaction_id = models.CharField(
-        'Transaction ID',
-        max_length=100,
-        unique=True,
-        null=True,
-        blank=True
-    )
-    payment_data = models.JSONField('Payment Data', default=dict, blank=True)
-    
-    paid_at = models.DateTimeField('Paid At', null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        verbose_name = 'Payment'
-        verbose_name_plural = 'Payments'
+        verbose_name = 'Temporary Ad'
+        verbose_name_plural = 'Temporary Ads'
         ordering = ['-created_at']
     
     def __str__(self):
-        return f"Payment from {self.user.name} - {self.amount} STN"
+        return f"Temporary: {self.product_name} ({self.session_token})"
     
-    def mark_as_paid(self):
-        self.status = 'paid'
-        self.paid_at = timezone.now()
-        self.save()
+    def transfer_to_official_ad(self, customer_profile):
+        """
+        Transfer the temporary ad to an official production Ad record.
         
-        if self.advertisement and self.plan:
-            self.advertisement.highlight_type = self.plan.highlight_type
-            
-            if self.advertisement.expiration_date:
-                new_expiration = max(
-                    self.advertisement.expiration_date,
-                    timezone.now()
-                ) + timezone.timedelta(days=self.plan.duration_days)
-                self.advertisement.expiration_date = new_expiration
-            else:
-                self.advertisement.expiration_date = timezone.now() + timezone.timedelta(days=self.plan.duration_days)
-            
-            if self.advertisement.status != 'active':
-                self.advertisement.status = 'active'
-                self.advertisement.published_at = timezone.now()
-            
-            self.advertisement.save()
+        Args:
+            customer_profile: The CustomerProfile instance to associate the new ad with.
+        
+        Returns:
+            Ad: The newly created official ad.
+        """
+        if not customer_profile or not isinstance(customer_profile, CustomerProfile):
+            raise ValidationError("A valid CustomerProfile is required.")
+        
+        # Create the official ad
+        official_ad = Ad.objects.create(
+            customer=customer_profile,
+            category=self.category,
+            product_name=self.product_name,
+            description=self.description,
+            price=self.price,
+            status=AdStatus.ACTIVE,  # Active by default
+            is_featured=False,  # Not featured by default
+        )
+        
+        # Migrate all related temporary images to the official ad
+        temp_images = self.temporary_images.all()
+        for temp_image in temp_images:
+            AdImage.objects.create(
+                ad=official_ad,
+                image=temp_image.image,
+                caption=temp_image.caption,
+                order=temp_image.order
+            )
+        
+        # Delete the temporary ad and its images
+        self.delete()
+        
+        return official_ad
+
+
+class TemporaryAdImage(models.Model):
+    """
+    Model for storing multiple images per temporary ad.
+    """
+    temporary_ad = models.ForeignKey(
+        TemporaryAd,
+        on_delete=models.CASCADE,
+        related_name='temporary_images'
+    )
+    image = models.ImageField(upload_to='temp_ad_images/')
+    caption = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    order = models.PositiveIntegerField(default=0)
+    
+    class Meta:
+        verbose_name = 'Temporary Ad Image'
+        verbose_name_plural = 'Temporary Ad Images'
+        ordering = ['order', 'created_at']
+    
+    def __str__(self):
+        return f"Temp Image for {self.temporary_ad.product_name}"
