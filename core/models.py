@@ -1,9 +1,12 @@
 # core/models.py
+import re
+
 from django.contrib.auth.models import (
     AbstractBaseUser,
     BaseUserManager,
     PermissionsMixin,
 )
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -20,19 +23,23 @@ class CustomUserManager(BaseUserManager):
         if not pin:
             raise ValueError('The 4-digit PIN must be set')
         
-        # Clean the mobile number to ensure consistency
-        mobile_number = self.normalize_email(mobile_number)  # We'll treat mobile as the identifier
+        # Clean and validate mobile number
+        cleaned = re.sub(r'\s+', '', mobile_number)
+        if not cleaned.startswith('+'):
+            raise ValueError('Mobile number must include country code (e.g., +4475836648484)')
+        if not re.match(r'^\+\d{7,15}$', cleaned):
+            raise ValueError('Invalid mobile number format. Use format: +4475836648484')
         
         user = self.model(
-            mobile_number=mobile_number,
+            mobile_number=cleaned,
             district=district,
             **extra_fields
         )
-        user.set_password(pin)  # Hash the PIN
+        user.set_password(pin)
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, mobile_number, district, password, **extra_fields):
+    def create_superuser(self, mobile_number, district, pin, **extra_fields):
         """
         Create and save a superuser with the given mobile number, district, and PIN.
         """
@@ -40,13 +47,12 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('is_active', True)
         
-        # For superusers, allow bypassing some restrictions
         if extra_fields.get('is_staff') is not True:
             raise ValueError('Superuser must have is_staff=True.')
         if extra_fields.get('is_superuser') is not True:
             raise ValueError('Superuser must have is_superuser=True.')
         
-        return self.create_user(mobile_number, district, password, **extra_fields)
+        return self.create_user(mobile_number, district, pin, **extra_fields)
 
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
@@ -64,7 +70,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     mobile_number = models.CharField(
         max_length=20, 
         unique=True, 
-        verbose_name="Mobile Number"
+        verbose_name="Mobile Number",
+        help_text="Format: +4475836648484"
     )
     district = models.CharField(
         max_length=20, 
@@ -78,7 +85,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     objects = CustomUserManager()
     
     USERNAME_FIELD = 'mobile_number'
-    REQUIRED_FIELDS = ['district']  # Required for createsuperuser
+    REQUIRED_FIELDS = ['district']
     
     class Meta:
         verbose_name = 'User'
@@ -92,3 +99,13 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     
     def get_short_name(self):
         return self.mobile_number
+    
+    def clean(self):
+        """Validate the mobile number format."""
+        if self.mobile_number:
+            cleaned = re.sub(r'\s+', '', self.mobile_number)
+            if not cleaned.startswith('+'):
+                raise ValidationError({'mobile_number': 'Mobile number must include country code (e.g., +4475836648484)'})
+            if not re.match(r'^\+\d{7,15}$', cleaned):
+                raise ValidationError({'mobile_number': 'Invalid mobile number format. Use format: +4475836648484'})
+            self.mobile_number = cleaned
