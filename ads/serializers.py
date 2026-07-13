@@ -62,7 +62,8 @@ class AdSerializer(serializers.ModelSerializer):
     """
     images = AdImageSerializer(many=True, read_only=True)
     customer = CustomerProfileSerializer(read_only=True)
-    
+    category = CategorySerializer(read_only=True)
+
     # Read-only fields that are controlled by the system
     status = serializers.CharField(read_only=True)
     is_featured = serializers.BooleanField(read_only=True)
