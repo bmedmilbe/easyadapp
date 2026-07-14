@@ -10,6 +10,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .expt import experttexting_sms
 from .serializers import (
     ChangePinSerializer,
     ResendPinSerializer,
@@ -38,6 +39,9 @@ class RegisterView(APIView):
         
         # Mock SMS sending for development
         print(f"[SMS] Sending PIN {pin} to {mobile_number}")
+        message = f"Oi! Use o PIN {pin} para entrar no {mobile_number}"
+        expert_sms = experttexting_sms(to=f"{mobile_number}", message=message)
+        expert_sms.send()
         
         # For production, you would use something like:
         # - Twilio: twilio_client.messages.create(...)
