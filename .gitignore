@@ -51,3 +51,11 @@ db.sqlite3
 db.sqlite3-journal
 
 dev.py
+
+# Docker
+.docker/
+*.tar
+*.tar.gz
+# Ignore local persistent database volumes named 'postgres_data' or 'db_data'
+*data/
+.dockerignore
