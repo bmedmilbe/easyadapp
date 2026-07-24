@@ -1,31 +1,16 @@
 
+import os
+
+import dj_database_url
+
 from .common import *
 
 # --- CORE SETTINGS ---
 DEBUG = False
-ALLOWED_HOSTS = ["tendastpapp-2de898e9780e.herokuapp.com"]
+ALLOWED_HOSTS = os.environ["ALLOWED_HOSTS"] 
 DJANGO_SETTINGS_MODULE = os.environ["DJANGO_SETTINGS_MODULE"]
 SECRET_KEY = os.environ["SECRET_KEY"]
 
-# --- CORS CONFIGURATION ---
-CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOWED_ORIGINS = [
-    "https://felaglandji.com",
-    "https://contaviva.vercel.app",
-    "https://ladyfish.vercel.app",
-    "https://www.contachiquila.com",
-]
-CORS_ALLOWED_ORIGIN_REGEXES = [
-    r"^https://\w+\.felaglandji\.com$",
-    r"^https://\w+\.contachiquila\.com$",
-]
-
-# --- CSRF & SECURITY ---
-CSRF_COOKIE_SECURE = True
-CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS + [
-    "https://*.felaglandji.com",
-    "https://*.contachiquila.com",
-]
 
 # --- DATABASE ---
 DATABASES = {"default": dj_database_url.config()}
@@ -49,3 +34,37 @@ AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
 TEXT_EXPERT_USERNAME = os.environ["TEXT_EXPERT_USERNAME"]
 TEXT_EXPERT_PASSWORD = os.environ["TEXT_EXPERT_PASSWORD"]
 TEXT_EXPERT_API_KEY = os.environ["TEXT_EXPERT_API_KEY"]
+
+
+# --- SECURITY UTILITIES ---
+def get_env_list(var_name, default=""):
+    """Safely extracts a clean list of origins from environment variables."""
+    value = os.environ.get(var_name, default)
+    return [origin.strip() for origin in value.split(",") if origin.strip()]
+
+# --- CORS CONFIGURATION ---
+CORS_ALLOW_ALL_ORIGINS = False
+
+# Load base production origins dynamically from environment variables
+CORS_ALLOWED_ORIGINS = get_env_list(
+    "CORS_ALLOWED_ORIGINS",
+    default=(
+        "https://feladoxi.com,"
+        "https://www.feladoxi.com"
+    )
+)
+
+# Regex matching for dynamic subdomains
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://\w+\.feladoxi\.com$",
+]
+
+# --- CSRF & COOKIE SECURITY ---
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True       # Enforces HTTPS for session cookies
+CSRF_COOKIE_HTTPONLY = True       # Prevents client-side JS from reading CSRF cookie
+
+# Explicitly declare all exact origins and wildcard subdomains
+CSRF_TRUSTED_ORIGINS = list(CORS_ALLOWED_ORIGINS) + [
+    "https://*.feladoxi.com",
+]

@@ -1,5 +1,4 @@
 # core/views.py
-import random
 
 from ads.models import TemporaryAd
 from django.db import transaction
@@ -10,105 +9,47 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .expt import experttexting_sms
 from .serializers import (
     ChangePinSerializer,
     ResendPinSerializer,
     UserLoginSerializer,
     UserRegistrationSerializer,
 )
+from .utils import send_pin_sms
 
+# core/views.py
 
 class RegisterView(APIView):
-    """
-    API view for user registration.
-    Generates a random 4-digit PIN and sends it via SMS.
-    """
     permission_classes = [AllowAny]
-    
-    def send_pin_via_sms(self, mobile_number, pin):
-        """
-        Send the PIN via SMS to the user's mobile number.
-        In production, integrate with an actual SMS gateway like Twilio, Africa's Talking, etc.
-        """
-        # TODO: Integrate with actual SMS service
-        # Example with Africa's Talking:
-        # from africastalking import SMS
-        # sms = SMS()
-        # sms.send(f"Your STP Market verification PIN is: {pin}", [mobile_number])
-        
-        # Mock SMS sending for development
-        print(f"[SMS] Sending PIN {pin} to {mobile_number}")
-        message = f"Oi! Use o PIN {pin} para entrar no {mobile_number}"
-        expert_sms = experttexting_sms(to=f"{mobile_number}", message=message)
-        expert_sms.send()
-        
-        # For production, you would use something like:
-        # - Twilio: twilio_client.messages.create(...)
-        # - Africa's Talking: sms.send(...)
-        # - Vonage/Nexmo: client.send_message(...)
-        # - Local SMS gateway: requests.post(...)
-        
-        return True
-    
-    @transaction.atomic
+
     def post(self, request):
-        """
-        Register a new user with a system-generated PIN.
-        """
-        # Validate input data
         serializer = UserRegistrationSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            # Create user (PIN is generated inside the serializer)
-            user = serializer.save()
-            
-            # Create associated CustomerProfile
-            # CustomerProfile.objects.create(user=user)
-            
-            # Get the generated PIN from the user instance
-            pin = getattr(user, '_generated_pin', None)
-            if not pin:
-                # Fallback: generate a new PIN if not available
-                pin = ''.join(random.choices('0123456789', k=4))
-                user.set_password(pin)
-                user.save()
-            
-            # Send PIN via SMS
-            sms_sent = self.send_pin_via_sms(user.mobile_number, pin)
+            with transaction.atomic():
+                user = serializer.save()
+                pin = user._generated_pin
+
+            # Reuse helper here!
+            sms_sent = send_pin_sms(user.mobile_number, pin)
             
             return Response({
-                'message': 'User registered successfully. PIN sent via SMS.',
+                'message': 'User registered successfully.' if sms_sent else 'User registered, but failed to send SMS.',
                 'mobile_number': user.mobile_number,
                 'district': user.district,
                 'pin_sent': sms_sent
             }, status=status.HTTP_201_CREATED)
             
         except Exception as e:
-            return Response({
-                'error': f'Registration failed: {str(e)}'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'error': f'Registration failed: {e!s}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ResendPinView(APIView):
-    """
-    API view to resend the PIN to a user.
-    """
     permission_classes = [AllowAny]
     
-    def send_pin_via_sms(self, mobile_number, pin):
-        """
-        Send the PIN via SMS.
-        """
-        print(f"[SMS] Resending PIN {pin} to {mobile_number}")
-        return True
-    
     def post(self, request):
-        """
-        Generate a new PIN and resend it via SMS.
-        """
         serializer = ResendPinSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -116,8 +57,8 @@ class ResendPinView(APIView):
         try:
             user, new_pin = serializer.save()
             
-            # Send the new PIN via SMS
-            sms_sent = self.send_pin_via_sms(user.mobile_number, new_pin)
+            # Reuse helper here!
+            sms_sent = send_pin_sms(user.mobile_number, new_pin)
             
             return Response({
                 'message': 'New PIN sent via SMS.',
@@ -126,11 +67,8 @@ class ResendPinView(APIView):
             }, status=status.HTTP_200_OK)
             
         except Exception as e:
-            return Response({
-                'error': f'Failed to resend PIN: {str(e)}'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
+            return Response({'error': f'Failed to resend PIN: {e!s}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
 class LoginView(APIView):
     """
     API view for user login with mobile number and PIN.

@@ -40,12 +40,9 @@ class CustomerProfile(models.Model):
         clean_number = ''.join(filter(str.isdigit, self.user.mobile_number))
         
         # Remove any leading zeros or country code indicators
-        if clean_number.startswith('0'):
-            clean_number = clean_number[1:]
+        clean_number = clean_number.removeprefix('0')
         
-        # If the number doesn't have a country code, add the São Tomé and Príncipe code
-        if not clean_number.startswith('239'):
-            clean_number = '239' + clean_number
+        
         
         return f"https://wa.me/{clean_number}"
 
