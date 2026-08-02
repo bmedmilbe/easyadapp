@@ -19,7 +19,7 @@ COPY Pipfile ./
 
 RUN pipenv install --system --skip-lock
 
-ENV DJANGO_SETTINGS_MODULE=camaramz.settings.dev
+ENV DJANGO_SETTINGS_MODULE=easyad.settings.dev
 
 COPY . .
 

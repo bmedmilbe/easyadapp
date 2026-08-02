@@ -7,7 +7,7 @@ from .common import *
 
 # --- CORE SETTINGS ---
 DEBUG = False
-ALLOWED_HOSTS = os.environ["ALLOWED_HOSTS"] 
+ALLOWED_HOSTS = os.environ["ALLOWED_HOSTS"].split(" ") 
 DJANGO_SETTINGS_MODULE = os.environ["DJANGO_SETTINGS_MODULE"]
 SECRET_KEY = os.environ["SECRET_KEY"]
 
