@@ -12,6 +12,7 @@ dj_database_url = "*"
 psycopg2-binary = "==2.9.0"
 djoser = "==2.3.3"
 drf-nested-routers = "==0.95.0"
+gunicorn = "*"
 
 [dev-packages]
 

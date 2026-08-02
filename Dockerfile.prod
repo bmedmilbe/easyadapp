@@ -1,0 +1,36 @@
+FROM python:3.10-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+# Change to your production settings module
+ENV DJANGO_SETTINGS_MODULE=easyad.settings.prod 
+
+WORKDIR /app
+
+# 1. Install build tools AND runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev \
+    libjpeg-dev \
+    zlib1g-dev \
+    libcairo2-dev \
+    gcc \
+    python3-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. Upgrade pip and install gunicorn
+RUN pip install --no-cache-dir --upgrade pip pipenv gunicorn
+
+COPY Pipfile ./
+# Remove --skip-lock for production to ensure reproducible builds
+RUN pipenv install --system
+
+COPY . .
+
+# 3. Run Django collectstatic (optional but recommended for production)
+# RUN python manage.py collectstatic --noinput
+
+EXPOSE 8000
+
+# 4. Use Gunicorn instead of runserver
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "easyad.wsgi:application"]
