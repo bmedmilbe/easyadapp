@@ -9,7 +9,7 @@ def send_pin_sms(mobile_number, pin):
     """
     try:
         print(f"[SMS] Sending PIN {pin} to {mobile_number}")
-        message = f"Oi! Use o PIN {pin} para entrar no {mobile_number}"
+        message = f"Oi! Use o PIN {pin} para entrar no feladoxi.vercel.app"
         
         expert_sms = experttexting_sms(to=str(mobile_number), message=message)
         expert_sms.send()
