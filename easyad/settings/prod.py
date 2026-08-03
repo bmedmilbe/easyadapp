@@ -50,7 +50,7 @@ CORS_ALLOWED_ORIGINS = get_env_list(
     "CORS_ALLOWED_ORIGINS",
     default=(
         "https://feladoxi.com,"
-        "https://www.feladoxi.com"
+        "https://www.feladoxi.com,"
         "https://feladoxi.vercel.app"
     )
 )
