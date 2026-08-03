@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FelaDoxi API | E-commerce for São Tomé and Príncipe</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col"
+  >
+    <!-- Header -->
+    <header class="bg-blue-900 text-white py-12 px-6 shadow-md">
+      <div class="max-w-5xl mx-auto">
+        <h1 class="text-4xl font-bold mb-2">FelaDoxi API</h1>
+        <p class="text-blue-200 text-lg">
+          The core backend powering e-commerce in São Tomé and Príncipe.
+        </p>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main
+      class="flex-grow max-w-5xl mx-auto w-full px-6 py-10 grid grid-cols-1 md:grid-cols-3 gap-8"
+    >
+      <!-- Left Column: Quick Links & Docs -->
+      <div class="md:col-span-1 space-y-6">
+        <section
+          class="bg-white p-6 rounded-xl shadow-sm border border-slate-200"
+        >
+          <h2
+            class="text-xl font-semibold mb-4 text-slate-700 flex items-center"
+          >
+            <svg
+              class="w-5 h-5 mr-2 text-blue-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+              ></path>
+            </svg>
+            API Documentation
+          </h2>
+          <ul class="space-y-3">
+            <li>
+              <a
+                href="/api/schema/swagger-ui/"
+                class="block p-3 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium transition-colors border border-blue-100"
+              >
+                Swagger UI (Interactive)
+              </a>
+            </li>
+            <li>
+              <a
+                href="/api/schema/redoc/"
+                class="block p-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium transition-colors border border-slate-100"
+              >
+                ReDoc (Static)
+              </a>
+            </li>
+            <li>
+              <a
+                href="/api/schema/"
+                class="block p-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium transition-colors border border-slate-100 text-sm"
+              >
+                Raw OpenAPI Schema
+              </a>
+            </li>
+          </ul>
+        </section>
+
+        <section
+          class="bg-white p-6 rounded-xl shadow-sm border border-slate-200"
+        >
+          <h2
+            class="text-xl font-semibold mb-4 text-slate-700 flex items-center"
+          >
+            <svg
+              class="w-5 h-5 mr-2 text-slate-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              ></path>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              ></path>
+            </svg>
+            Administration
+          </h2>
+          <a
+            href="/admin/"
+            class="block p-3 text-center rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-medium transition-colors"
+          >
+            Django Admin Panel
+          </a>
+        </section>
+      </div>
+
+      <!-- Right Column: Endpoint References -->
+      <div class="md:col-span-2 space-y-6">
+        <section
+          class="bg-white p-6 rounded-xl shadow-sm border border-slate-200"
+        >
+          <h2 class="text-xl font-semibold mb-4 text-slate-700 border-b pb-2">
+            Auth & Account (<code class="text-sm bg-slate-100 px-1 rounded"
+              >/api/auth/</code
+            >)
+          </h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-600">
+              <tbody>
+                <tr class="border-b">
+                  <td class="py-3 font-mono text-purple-600 font-semibold w-24">
+                    POST
+                  </td>
+                  <td class="py-3 font-mono">/register/</td>
+                  <td class="py-3 text-slate-500">
+                    Register a new user account
+                  </td>
+                </tr>
+                <tr class="border-b">
+                  <td class="py-3 font-mono text-purple-600 font-semibold">
+                    POST
+                  </td>
+                  <td class="py-3 font-mono">/login/</td>
+                  <td class="py-3 text-slate-500">
+                    Authenticate and get tokens
+                  </td>
+                </tr>
+                <tr class="border-b">
+                  <td class="py-3 font-mono text-purple-600 font-semibold">
+                    POST
+                  </td>
+                  <td class="py-3 font-mono">/change-pin/</td>
+                  <td class="py-3 text-slate-500">Update user PIN</td>
+                </tr>
+                <tr>
+                  <td class="py-3 font-mono text-purple-600 font-semibold">
+                    POST
+                  </td>
+                  <td class="py-3 font-mono">/resend-pin/</td>
+                  <td class="py-3 text-slate-500">Request a new PIN</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section
+          class="bg-white p-6 rounded-xl shadow-sm border border-slate-200"
+        >
+          <h2 class="text-xl font-semibold mb-4 text-slate-700 border-b pb-2">
+            Marketplace (<code class="text-sm bg-slate-100 px-1 rounded"
+              >/api/marketplace/</code
+            >)
+          </h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-600">
+              <tbody>
+                <tr class="border-b">
+                  <td class="py-3 font-mono text-blue-600 font-semibold w-24">
+                    GET / POST
+                  </td>
+                  <td class="py-3 font-mono">/categories/</td>
+                </tr>
+                <tr class="border-b">
+                  <td class="py-3 font-mono text-blue-600 font-semibold">
+                    GET / POST
+                  </td>
+                  <td class="py-3 font-mono">/ads/</td>
+                </tr>
+                <tr class="border-b bg-slate-50">
+                  <td class="py-2 pl-4 font-mono text-slate-500 text-xs">
+                    Nested
+                  </td>
+                  <td class="py-2 font-mono text-xs" colspan="2">
+                    /ads/{ad_pk}/images/
+                  </td>
+                </tr>
+                <tr class="border-b">
+                  <td class="py-3 font-mono text-blue-600 font-semibold">
+                    GET / POST
+                  </td>
+                  <td class="py-3 font-mono">/guest/temporary-ads/</td>
+                </tr>
+                <tr class="bg-slate-50">
+                  <td class="py-2 pl-4 font-mono text-slate-500 text-xs">
+                    Nested
+                  </td>
+                  <td class="py-2 font-mono text-xs" colspan="2">
+                    /guest/temporary-ads/{temporary_ad_pk}/images/
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer
+      class="bg-slate-100 text-center py-6 text-slate-500 text-sm mt-auto border-t border-slate-200"
+    >
+      <p>
+        &copy;
+        <script>
+          document.write(new Date().getFullYear());
+        </script>
+        FelaDoxi. Built for São Tomé and Príncipe.
+      </p>
+    </footer>
+  </body>
+</html>
