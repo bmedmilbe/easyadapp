@@ -5,6 +5,7 @@ import re
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed, ValidationError
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from .models import CustomUser
 
@@ -71,10 +72,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return user
 
 
-class UserLoginSerializer(serializers.Serializer):
+
+
+class UserLoginSerializer(TokenObtainPairSerializer):
     """
-    Serializer for user login. Validates mobile_number and PIN.
-    Accepts mobile_number with country code (e.g., +4475836648484)
+    Serializer for user login. Sanitises mobile_number, verifies PIN format,
+    triggers internal backend authentication, and returns signed JWT pairs.
     """
     mobile_number = serializers.CharField(required=True)
     pin = serializers.CharField(
@@ -82,25 +85,27 @@ class UserLoginSerializer(serializers.Serializer):
         required=True,
         min_length=4,
         max_length=4,
-        help_text="4-digit PIN"
+        help_text="Exactly 4-digit PIN authentication string"
     )
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Pop traditional credential fields to isolate custom flow
+        self.fields.pop('username', None)
+        self.fields.pop('password', None)
+
     def validate_mobile_number(self, value):
         """
-        Clean the mobile number for authentication.
+        Strips whitespace and enforces international formatting prefix rules.
         """
-        # Remove spaces
         cleaned = re.sub(r'\s+', '', value)
-        
-        # Ensure it has a country code
         if not cleaned.startswith('+'):
             raise serializers.ValidationError("Phone number must include country code (e.g., +4475836648484)")
-        
         return cleaned
     
     def validate_pin(self, value):
         """
-        Validate that the PIN is exactly 4 digits.
+        Enforces strict structural constraints on numeric access strings.
         """
         if not value.isdigit():
             raise serializers.ValidationError("PIN must contain only digits.")
@@ -110,30 +115,37 @@ class UserLoginSerializer(serializers.Serializer):
     
     def validate(self, attrs):
         """
-        Validate the login credentials.
+        Main routing method for identity verification and token wrapping.
         """
         mobile_number = attrs.get('mobile_number')
         pin = attrs.get('pin')
         
         if not mobile_number or not pin:
-            raise ValidationError("Both mobile_number and PIN are required.")
+            raise ValidationError("Both mobile_number and PIN are required fields.")
         
-        # Authenticate the user
+        # Evaluates credentials across registered engine components
         user = authenticate(
             request=self.context.get('request'),
-            username=mobile_number,
+            mobile_number=mobile_number,  # Ensure custom backend maps this argument correctly
             password=pin
         )
         
         if not user:
-            raise AuthenticationFailed("Invalid mobile number or PIN.")
+            raise AuthenticationFailed("Invalid mobile number or PIN combination.")
         
         if not user.is_active:
-            raise AuthenticationFailed("User account is disabled.")
+            raise AuthenticationFailed("This user account profile has been disabled.")
         
-        attrs['user'] = user
-        return attrs
-
+        # Link context instance to self.user for SimpleJWT's internal claims process
+        self.user = user
+        
+        # Execute parent encryption procedures for token generation
+        data = super().validate(attrs)
+        
+        # Inject explicit high-utility response parameters outside token bodies
+        data['user_id'] = self.user.id
+        
+        return data
 
 class ChangePinSerializer(serializers.Serializer):
     """

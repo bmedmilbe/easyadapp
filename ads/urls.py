@@ -3,7 +3,8 @@ from rest_framework_nested.routers import DefaultRouter, NestedSimpleRouter
 
 from .views import (
     AdImageViewSet,
-    AdViewSet,
+    AdManageViewSet,
+    AdViewViewSet,
     CategoryViewSet,
     TemporaryAdImageViewSet,
     TemporaryAdViewSet,
@@ -11,13 +12,12 @@ from .views import (
 
 app_name = 'ads'
 
-# Use DefaultRouter so you get a browseable API root landing page out of the box
 router = DefaultRouter()
 
-# Primary resource registration
 router.register(r'categories', CategoryViewSet, basename='category')
-router.register(r'ads', AdViewSet, basename='ad')
-router.register(r'guest/temporary-ads', TemporaryAdViewSet, basename='temporary-ad')
+router.register(r'ads', AdViewViewSet, basename='ad-view')
+router.register(r'manage/ads', AdManageViewSet, basename='ad-manage')
+router.register(r'guest/temporary-ads', TemporaryAdViewSet, basename='temporary-ad') 
 
 # Nested routing for official Ad images -> /ads/{ad_pk}/images/
 ads_router = NestedSimpleRouter(router, r'ads', lookup='ad')
@@ -27,7 +27,6 @@ ads_router.register(r'images', AdImageViewSet, basename='ad-image')
 temp_ads_router = NestedSimpleRouter(router, r'guest/temporary-ads', lookup='temporary_ad')
 temp_ads_router.register(r'images', TemporaryAdImageViewSet, basename='temporary-ad-image')
 
-# Explicitly use standard Django path structure to bundle URLs safely
 urlpatterns = [
     path('', include(router.urls)),
     path('', include(ads_router.urls)),

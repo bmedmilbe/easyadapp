@@ -163,7 +163,7 @@ class AdImage(models.Model):
         on_delete=models.CASCADE,
         related_name='images'
     )
-    image = models.ImageField(upload_to='ad_images/')
+    image = models.ImageField(upload_to='ads/ad_images/')
     caption = models.CharField(max_length=200, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     order = models.PositiveIntegerField(default=0)
@@ -177,20 +177,23 @@ class AdImage(models.Model):
         return f"Image for {self.ad.product_name}"
 
 
+
+
 class TemporaryAd(models.Model):
     """
     Temporary draft holding station for non-authenticated users.
     No relationship to User or CustomerProfile.
     """
-    session_token = models.UUIDField(default=uuid.uuid4, unique=True)
+    id = models.UUIDField(default=uuid.uuid4, unique=True, primary_key=True)
+
     category = models.ForeignKey(
         Category,
         on_delete=models.SET_NULL,
         null=True,
         related_name='temporary_ads'
     )
-    product_name = models.CharField(max_length=200)
-    description = models.TextField(blank=True)
+    product_name = models.CharField(max_length=200, null=True)
+    description = models.TextField(blank=True, null=True)
     price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     
     # Metadata
@@ -254,7 +257,7 @@ class TemporaryAdImage(models.Model):
         on_delete=models.CASCADE,
         related_name='temporary_images'
     )
-    image = models.ImageField(upload_to='temp_ad_images/')
+    image = models.ImageField(upload_to='ads/temp_ad_images/')
     caption = models.CharField(max_length=200, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     order = models.PositiveIntegerField(default=0)

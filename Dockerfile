@@ -1,6 +1,5 @@
 FROM python:3.10-slim
 
-
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
@@ -15,11 +14,9 @@ RUN apt-get update && apt-get install -y \
 # 2. Upgrade pip to ensure the best compatibility with pre-built wheels
 RUN pip install --no-cache-dir --upgrade pip pipenv
 
-COPY Pipfile ./
+COPY Pipfile Pipfile.lock ./
 
-RUN pipenv install --system --skip-lock
-
-ENV DJANGO_SETTINGS_MODULE=easyad.settings.dev
+RUN pipenv install --system --deploy
 
 COPY . .
 

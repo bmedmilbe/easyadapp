@@ -1,5 +1,5 @@
-# ads/serializers.py
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from .models import (
     Ad,
@@ -31,7 +31,7 @@ class CategorySerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Category
-        fields = ['id', 'name', 'slug','icon', 'description']
+        fields = ['id', 'name', 'slug', 'icon', 'description']
         read_only_fields = ['id', 'slug']
 
 
@@ -39,21 +39,65 @@ class AdImageSerializer(serializers.ModelSerializer):
     """
     Serializer for AdImage model.
     """
-    image_url = serializers.SerializerMethodField()
-    
     class Meta:
         model = AdImage
-        fields = ['id', 'image', 'image_url', 'caption', 'order', 'created_at']
+        fields = ['id', 'image', 'caption', 'order', 'created_at']
         read_only_fields = ['id', 'created_at']
+
+
+class AdCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Ad model with nested images.
+    """
+    temp_ad_id = serializers.UUIDField()
     
-    def get_image_url(self, obj):
+    class Meta:
+        model = Ad
+        fields = ['id', 'temp_ad_id']
+        read_only_fields = ['id']
+    
+    def validate(self, attrs):
         """
-        Return the URL of the image.
+        Ensure the temporary ad data is fully valid before allowing the conversion.
         """
+        try:
+            # Optimized: Single DB hit instead of evaluating .exists() and .first() separately
+            temp = TemporaryAd.objects.get(pk=attrs['temp_ad_id'])
+        except TemporaryAd.DoesNotExist:
+            raise ValidationError({"detail": "Temp AD not found!"})
+
+        if not temp.product_name:
+            raise ValidationError({"detail": "Temp AD or product name not found!"})
+
+        if not temp.category:
+            raise ValidationError({"category": "Category is required."})
+
+        if temp.price is None or temp.price <= 0:
+            raise ValidationError({"price": "A valid price is required."})
+
+        if not temp.temporary_images.exists():
+            raise ValidationError({"images": "At least one image is required."})
+
+        # Save the fetched object in attrs context to avoid querying it again during create()
+        attrs['temp_ad_object'] = temp
+        return attrs
+    
+    def create(self, validated_data):
+        """
+        Create a new ad from temp ad with the customer context.
+        """
+        # Safe access to profile via user context injected into views
         request = self.context.get('request')
-        if request and obj.image:
-            return request.build_absolute_uri(obj.image.url)
-        return obj.image.url if obj.image else None
+        if not request or not request.user.is_authenticated:
+            raise ValidationError({"detail": "Authentication required."})
+            
+        try:
+            customer = CustomerProfile.objects.get(user=request.user)
+        except CustomerProfile.DoesNotExist:
+            raise ValidationError({"detail": "User profile not found. Complete your profile before publishing."})
+            
+        temp_ad = validated_data["temp_ad_object"]
+        return temp_ad.transfer_to_official_ad(customer_profile=customer)
 
 
 class AdSerializer(serializers.ModelSerializer):
@@ -63,11 +107,6 @@ class AdSerializer(serializers.ModelSerializer):
     images = AdImageSerializer(many=True, read_only=True)
     customer = CustomerProfileSerializer(read_only=True)
     category = CategorySerializer(read_only=True)
-
-    # Read-only fields that are controlled by the system
-    status = serializers.CharField(read_only=True)
-    is_featured = serializers.BooleanField(read_only=True)
-    expires_at = serializers.DateTimeField(read_only=True)
     
     class Meta:
         model = Ad
@@ -77,124 +116,33 @@ class AdSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at', 'images'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
-    
-    def validate(self, attrs):
-        """
-        Ensure the customer is set from the request user's profile.
-        """
-        request = self.context.get('request')
-        if request and hasattr(request.user, 'profile'):
-            attrs['customer'] = request.user.profile
-        return attrs
-    
-    def create(self, validated_data):
-        """
-        Create a new ad with the customer set from the request.
-        """
-        # Remove customer from validated_data if present, we'll set it ourselves
-        customer = validated_data.pop('customer', None)
-        request = self.context.get('request')
-        
-        if request and hasattr(request.user, 'profile'):
-            customer = request.user.profile
-        
-        if not customer:
-            raise serializers.ValidationError("Customer profile is required.")
-        
-        # Create the ad
-        ad = Ad.objects.create(customer=customer, **validated_data)
-        return ad
 
 
 class TemporaryAdImageSerializer(serializers.ModelSerializer):
     """
     Serializer for TemporaryAdImage model.
     """
-    image_url = serializers.SerializerMethodField()
-    
     class Meta:
         model = TemporaryAdImage
-        fields = ['id', 'image', 'image_url', 'caption', 'order', 'created_at']
+        fields = ['id', 'image', 'caption', 'order', 'created_at']
         read_only_fields = ['id', 'created_at']
-    
-    def get_image_url(self, obj):
-        """
-        Return the URL of the temporary image.
-        """
-        request = self.context.get('request')
-        if request and obj.image:
-            return request.build_absolute_uri(obj.image.url)
-        return obj.image.url if obj.image else None
+
+    def create(self, validated_data):
+        ad_id = self.context["temp_ad_id"]
+        validated_data["temporary_ad_id"] = ad_id
+        return super().create(validated_data)
 
 
 class TemporaryAdSerializer(serializers.ModelSerializer):
     """
     Serializer for TemporaryAd - guest user flow.
-    session_token is read-only and generated server-side.
     """
     temporary_images = TemporaryAdImageSerializer(many=True, read_only=True)
-    session_token = serializers.UUIDField(read_only=True)
     
     class Meta:
         model = TemporaryAd
         fields = [
-            'id', 'session_token', 'category', 'product_name', 
+            'id', 'category', 'product_name', 
             'description', 'price', 'temporary_images', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
-    
-    def create(self, validated_data):
-        """
-        Create a new temporary ad with a generated session token.
-        """
-        # session_token will be automatically generated by the model's default
-        temporary_ad = TemporaryAd.objects.create(**validated_data)
-        return temporary_ad
-    
-    def update(self, instance, validated_data):
-        """
-        Update an existing temporary ad.
-        """
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-        return instance
-
-
-class TemporaryAdTransferSerializer(serializers.Serializer):
-    """
-    Serializer for transferring a temporary ad to an official ad.
-    """
-    session_token = serializers.UUIDField(required=True)
-    
-    def validate_session_token(self, value):
-        """
-        Validate that the session token exists.
-        """
-        try:
-            temporary_ad = TemporaryAd.objects.get(session_token=value)
-            self.context['temporary_ad'] = temporary_ad
-        except TemporaryAd.DoesNotExist:
-            raise serializers.ValidationError("Invalid session token.")
-        return value
-    
-    def validate(self, attrs):
-        """
-        Ensure the user has a profile.
-        """
-        request = self.context.get('request')
-        if not request or not hasattr(request.user, 'profile'):
-            raise serializers.ValidationError("User profile not found.")
-        return attrs
-    
-    def save(self, **kwargs):
-        """
-        Transfer the temporary ad to an official ad.
-        """
-        temporary_ad = self.context['temporary_ad']
-        user_profile = self.context['request'].user.profile
-        
-        # Transfer to official ad
-        official_ad = temporary_ad.transfer_to_official_ad(user_profile)
-        
-        return official_ad

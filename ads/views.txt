@@ -1,18 +1,11 @@
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, generics, mixins, permissions, viewsets
+from rest_framework import filters, permissions, viewsets
 from rest_framework.permissions import (
     AllowAny,
     IsAuthenticatedOrReadOnly,
 )
 
-from .models import (
-    Ad,
-    AdImage,
-    Category,
-    CustomerProfile,
-    TemporaryAd,
-    TemporaryAdImage,
-)
+from .models import Ad, AdImage, Category, CustomerProfile, TemporaryAd, TemporaryAdImage
 from .permissions import IsOwnerOrReadOnly
 from .serializers import (
     AdCreateSerializer,
@@ -88,6 +81,7 @@ class AdManageViewSet(viewsets.ModelViewSet):
             
         try:
             customer = CustomerProfile.objects.get(user=user)
+            # Corrected: Filter query returning a queryset instead of .first()
             return Ad.objects.filter(customer_id=customer.id)
         except CustomerProfile.DoesNotExist:
             return Ad.objects.none()
@@ -126,17 +120,16 @@ class AdImageViewSet(viewsets.ModelViewSet):
         return AdImage.objects.filter(ad_id=ad_id)
     
 
-class TemporaryAdViewSet(mixins.CreateModelMixin,
-                         mixins.RetrieveModelMixin,
-                         generics.GenericViewSet):
-    """
+class TemporaryAdViewSet(mixins.CreateModelView,
+                        mixins.RetrieveModelView,
+                          generics.GenericViewSet):
+    '''
     ViewSet for temporary ads (guest flow).
-    Allows ONLY creation (POST) and retrieval (GET detail).
-    """
+    '''
     serializer_class = TemporaryAdSerializer
     permission_classes = [AllowAny]
+    
     queryset = TemporaryAd.objects.all()
-
     
 class TemporaryAdImageViewSet(viewsets.ModelViewSet):
     """
