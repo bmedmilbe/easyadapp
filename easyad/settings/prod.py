@@ -93,3 +93,10 @@ else:
     CSRF_TRUSTED_ORIGINS = list(CORS_ALLOWED_ORIGINS) + [
         "https://*.feladoxi.com",
     ]
+
+
+AWS_ACCESS_KEY_ID = os.environ["AWS_ACCESS_KEY_ID"]
+AWS_SECRET_ACCESS_KEY = os.environ["AWS_SECRET_ACCESS_KEY"] 
+AWS_STORAGE_BUCKET_NAME = os.environ["AWS_STORAGE_BUCKET_NAME"] 
+AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
+

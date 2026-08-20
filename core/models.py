@@ -1,27 +1,22 @@
-# core/models.py
 import re
+import secrets
 
 from django.contrib.auth.models import (
-    AbstractBaseUser,
+    AbstractUser,
     BaseUserManager,
-    PermissionsMixin,
 )
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils import timezone
 
 
 class CustomUserManager(BaseUserManager):
-    def create_user(self, mobile_number, district, pin, **extra_fields):
+    def create_user(self, mobile_number,  pin, **extra_fields):
         """
-        Create and save a regular user with the given mobile number, district, and PIN.
+        Create and save a regular user with the given mobile number and PIN.
         """
         if not mobile_number:
             raise ValueError('The Mobile Number must be set')
-        if not district:
-            raise ValueError('The District must be set')
-        if not pin:
-            raise ValueError('The 4-digit PIN must be set')
+        
         
         # Clean and validate mobile number
         cleaned = re.sub(r'\s+', '', mobile_number)
@@ -32,73 +27,41 @@ class CustomUserManager(BaseUserManager):
         
         user = self.model(
             mobile_number=cleaned,
-            district=district,
             **extra_fields
         )
         user.set_password(pin)
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, mobile_number, district, pin, **extra_fields):
-        """
-        Create and save a superuser with the given mobile number, district, and PIN.
-        """
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('is_active', True)
+    def create_superuser(self, mobile_number, **extra_fields):
+        pin = f"{secrets.randbelow(10000):04d}"
+        print(pin)
         
-        if extra_fields.get('is_staff') is not True:
-            raise ValueError('Superuser must have is_staff=True.')
-        if extra_fields.get('is_superuser') is not True:
-            raise ValueError('Superuser must have is_superuser=True.')
-        
-        return self.create_user(mobile_number, district, pin, **extra_fields)
+        return self.create_user(mobile_number, pin, **extra_fields)
 
 
-class CustomUser(AbstractBaseUser, PermissionsMixin):
-    DISTRICT_CHOICES = [
-        ('AGUA_GRANDE', 'Água Grande'),
-        ('CANTAGALO', 'Cantagalo'),
-        ('CAUE', 'Caué'),
-        ('LEMBA', 'Lembá'),
-        ('LOBATA', 'Lobata'),
-        ('ME_ZOCHI', 'Mé-Zóchi'),
-        ('PAGUE', 'Pagué'),
-        ('DIASPORA', 'Diaspora'),
-    ]
-    
+class User(AbstractUser):
+
     mobile_number = models.CharField(
         max_length=20, 
         unique=True, 
         verbose_name="Mobile Number",
         help_text="Format: +4475836648484"
     )
-    district = models.CharField(
-        max_length=20, 
-        choices=DISTRICT_CHOICES,
-        verbose_name="District"
-    )
-    is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False)
-    date_joined = models.DateTimeField(default=timezone.now)
+    
     
     objects = CustomUserManager()
     
     USERNAME_FIELD = 'mobile_number'
-    REQUIRED_FIELDS = ['district']
     
     class Meta:
         verbose_name = 'User'
         verbose_name_plural = 'Users'
     
     def __str__(self):
-        return self.mobile_number
+        return f"{self.first_name} {self.last_name}"
     
-    def get_full_name(self):
-        return self.mobile_number
     
-    def get_short_name(self):
-        return self.mobile_number
     
     def clean(self):
         """Validate the mobile number format."""

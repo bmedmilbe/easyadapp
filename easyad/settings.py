@@ -49,7 +49,7 @@ INSTALLED_APPS = [
     'ads',
 ]
 
-AUTH_USER_MODEL = 'core.CustomUser'
+AUTH_USER_MODEL = 'core.User'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
