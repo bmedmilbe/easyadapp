@@ -1,5 +1,5 @@
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, generics, mixins, permissions, viewsets
+from rest_framework import filters, mixins, permissions, viewsets
 from rest_framework.permissions import (
     AllowAny,
     IsAuthenticatedOrReadOnly,
@@ -13,7 +13,6 @@ from .models import (
     TemporaryAd,
     TemporaryAdImage,
 )
-from .permissions import IsOwnerOrReadOnly
 from .serializers import (
     AdCreateSerializer,
     AdImageSerializer,
@@ -57,7 +56,7 @@ class AdManageViewSet(viewsets.ModelViewSet):
     ViewSet for authenticated users to manage (add, edit, delete) their own ads.
     """
     queryset = Ad.objects.all()
-    permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated]
     
     # Restrict to only add, edit, and delete actions
     http_method_names = ['post', 'put', 'patch', 'delete']
@@ -128,7 +127,7 @@ class AdImageViewSet(viewsets.ModelViewSet):
 
 class TemporaryAdViewSet(mixins.CreateModelMixin,
                          mixins.RetrieveModelMixin,
-                         generics.GenericViewSet):
+                         viewsets.GenericViewSet):
     """
     ViewSet for temporary ads (guest flow).
     Allows ONLY creation (POST) and retrieval (GET detail).

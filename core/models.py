@@ -1,9 +1,8 @@
-# core/models.py
 import re
 import secrets
 
 from django.contrib.auth.models import (
-    AbstractBaseUser,
+    AbstractUser,
     BaseUserManager,
 )
 from django.core.exceptions import ValidationError
@@ -34,15 +33,14 @@ class CustomUserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, mobile_number, district, **extra_fields):
-        
+    def create_superuser(self, mobile_number, **extra_fields):
         pin = f"{secrets.randbelow(10000):04d}"
         print(pin)
         
-        return self.create_user(mobile_number, district,pin, **extra_fields)
+        return self.create_user(mobile_number, pin, **extra_fields)
 
 
-class User(AbstractBaseUser):
+class User(AbstractUser):
 
     mobile_number = models.CharField(
         max_length=20, 

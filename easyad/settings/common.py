@@ -44,12 +44,13 @@ INSTALLED_APPS = [
     'corsheaders',
     'drf_spectacular',
     "storages",
+    "django_filters",
     # Local apps
     'core',
     'ads',
 ]
 
-AUTH_USER_MODEL = 'core.CustomUser'
+AUTH_USER_MODEL = 'core.User'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

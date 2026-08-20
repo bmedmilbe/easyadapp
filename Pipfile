@@ -21,6 +21,7 @@ django-redis = "*"
 django-storages = "*"
 boto3 = "*"
 djangorestframework-simplejwt = "*"
+django-filter = "*"
 
 [dev-packages]
 

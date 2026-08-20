@@ -1,4 +1,3 @@
-# core/serializers.py
 import random
 import re
 
@@ -7,7 +6,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed, ValidationError
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from .models import CustomUser
+from .models import User
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -17,11 +16,10 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     """
     
     class Meta:
-        model = CustomUser
-        fields = ['id', 'mobile_number', 'district']
+        model = User
+        fields = ['id', 'mobile_number']
         extra_kwargs = {
-            'mobile_number': {'required': True},
-            'district': {'required': True},
+            'mobile_number': {'required': True}
         }
     
     def validate_mobile_number(self, value):
@@ -41,7 +39,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Invalid phone number format. Use format: +4475836648484")
         
         # Check if user already exists with this number
-        if CustomUser.objects.filter(mobile_number=cleaned).exists():
+        if User.objects.filter(mobile_number=cleaned).exists():
             raise serializers.ValidationError("A user with this mobile number already exists.")
         
         return cleaned
@@ -60,7 +58,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         pin = self.generate_pin()
         
         # Create user with the generated PIN
-        user = CustomUser.objects.create_user(
+        user = User.objects.create_user(
             mobile_number=validated_data['mobile_number'],
             district=validated_data['district'],
             pin=pin
@@ -237,8 +235,8 @@ class ResendPinSerializer(serializers.Serializer):
             raise serializers.ValidationError("Phone number must include country code (e.g., +4475836648484)")
         
         try:
-            user = CustomUser.objects.get(mobile_number=cleaned)
-        except CustomUser.DoesNotExist:
+            user = User.objects.get(mobile_number=cleaned)
+        except User.DoesNotExist:
             raise serializers.ValidationError("User with this mobile number does not exist.")
         
         self.context['user'] = user
