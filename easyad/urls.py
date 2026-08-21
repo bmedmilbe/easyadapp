@@ -14,7 +14,8 @@ urlpatterns = [
     path('', TemplateView.as_view(template_name='index.html'), name='home'),
     path('admin/', admin.site.urls),
     # Auth/Account endpoints
-    path('api/auth/', include('core.urls')),
+    path('api/auth/', include('djoser.urls')),
+    path("api/auth/", include("djoser.urls.jwt")),
     # Marketplace/Ads endpoints
     path('api/marketplace/', include('ads.urls')),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

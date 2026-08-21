@@ -26,23 +26,19 @@ class TestCoreModels:
         #Given
         data =  {
             "mobile_number":"9882053",
-            "username":"9882053",
             "password": "password123"
         }
         
         #Act
         with pytest.raises(ValidationError):
             User.objects.create(**data)
-
-    def test_create_new_user_no_match_username(self):
+    def test_create_new_user_no_data(self):
         #Given
-        data =  {
-            "mobile_number":"+2399882053",
-            "username":"+2389882053",
-            "password": "password123"
-        }
-
-        #Act 
+        data =  {}
+        
+        #Act
         with pytest.raises(ValidationError):
             User.objects.create(**data)
+
+    
 

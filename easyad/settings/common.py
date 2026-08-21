@@ -89,20 +89,7 @@ WSGI_APPLICATION = 'easyad.wsgi.application'
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-]
+AUTH_PASSWORD_VALIDATORS = []
 
 
 # Internationalization
@@ -136,22 +123,15 @@ REST_FRAMEWORK = {
 
 
 DJOSER = {
-    'USER_CREATE_PASSWORD_RETYPE': False,
-    'USERNAME_CHANGED_EMAIL_CONFIRMATION': False,
-    'PASSWORD_CHANGED_EMAIL_CONFIRMATION': False,
-    'SEND_CONFIRMATION_EMAIL': False,
-    'SEND_ACTIVATION_EMAIL': False,
-    'SET_USERNAME_RETYPE': False,
-    'SET_PASSWORD_RETYPE': False,
-    'PASSWORD_RESET_CONFIRM_URL': 'password-reset/{uid}/{token}',
-    'USERNAME_RESET_CONFIRM_URL': 'username-reset/{uid}/{token}',
-    'ACTIVATION_URL': 'activate/{uid}/{token}',
+    "SET_USERNAME_RETYPE": True,
+    "PASSWORD_RESET_CONFIRM_URL": "auth/reset-password/{uid}/{token}",
+    "PASSWORD_RESET_CONFIRM_RETYPE": True,
+    'LOGIN_FIELD': 'mobile_number',
     'USER_ID_FIELD': 'id',
     'SERIALIZERS': {
-        'user_create': 'core.serializers.CustomUserCreateSerializer',
-        'user': 'core.serializers.CustomUserSerializer',
-        'current_user': 'core.serializers.CustomUserSerializer',
-        'user_delete': 'djoser.serializers.UserDeleteSerializer',
+        'user_create': 'core.serializers.UserCreateSerializer',
+        'user': 'core.serializers.UserSerializer',
+        'current_user': 'core.serializers.UserSerializer',
     },
 }
 

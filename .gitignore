@@ -60,3 +60,5 @@ dev.py
 *data/
 .dockerignore
 .env.txt
+
+staticfiles/
