@@ -49,7 +49,7 @@ class AdCreateSerializer(serializers.ModelSerializer):
     """
     Serializer for Ad model with nested images.
     """
-    temp_ad_id = serializers.UUIDField()
+    temp_ad_id = serializers.UUIDField(write_only=True)
     
     class Meta:
         model = Ad

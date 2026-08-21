@@ -53,13 +53,13 @@ class AdViewViewSet(viewsets.ReadOnlyModelViewSet):
 
 class AdManageViewSet(viewsets.ModelViewSet):
     """
-    ViewSet for authenticated users to manage (add, edit, delete) their own ads.
+    ViewSet for authenticated users to manage (list,add, edit, delete) their own ads.
     """
     queryset = Ad.objects.all()
     permission_classes = [permissions.IsAuthenticated]
     
     # Restrict to only add, edit, and delete actions
-    http_method_names = ['post', 'put', 'patch', 'delete']
+    http_method_names = ['post', 'get', 'put', 'patch', 'delete']
 
     filter_backends = [filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter]
     
