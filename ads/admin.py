@@ -36,7 +36,7 @@ class AdImageInline(admin.TabularInline):
         return "No image"
     image_preview.short_description = 'Preview'
 
-admin.register(Ad)
+@admin.register(Ad)
 class AdAdmin(admin.ModelAdmin):
     """
     Admin configuration for the Ad model.
@@ -216,7 +216,7 @@ class TemporaryAdImageInline(admin.TabularInline):
         return "No image"
     image_preview.short_description = 'Preview'
 
-admin.register(TemporaryAd)
+@admin.register(TemporaryAd)
 class TemporaryAdAdmin(admin.ModelAdmin):
     """
     Admin configuration for the TemporaryAd model.
@@ -309,7 +309,7 @@ class TemporaryAdAdmin(admin.ModelAdmin):
         self.message_user(request, f'{count} old draft(s) deleted.')
     delete_old_drafts.short_description = 'Delete drafts older than 7 days'
 
-admin.register(Category)
+@admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     """
     Admin configuration for the Category model.
