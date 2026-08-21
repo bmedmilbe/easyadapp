@@ -71,4 +71,11 @@ class User(AbstractUser):
                 raise ValidationError({'mobile_number': 'Mobile number must include country code (e.g., +4475836648484)'})
             if not re.match(r'^\+\d{7,15}$', cleaned):
                 raise ValidationError({'mobile_number': 'Invalid mobile number format. Use format: +4475836648484'})
+            if not self.mobile_number == self.username:
+                raise ValidationError({'username': 'Invalid username. Mobile number and username must match.'})
             self.mobile_number = cleaned
+
+    def save(self, *args, **kwargs):
+        # self.full_clean() automatically calls self.clean()
+        self.full_clean() 
+        super().save(*args, **kwargs)
