@@ -6,6 +6,7 @@ from ads.serializers import (
     AdCreateSerializer,
     CategorySerializer,
     CustomerProfileSerializer,
+    TemporaryAdImageSerializer,
 )
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -42,24 +43,31 @@ class CategorySerializerTest(TestCase):
 
 
 class TemporaryAdImageSerializerTest(TestCase):
-    # def test_create_injects_context_temp_ad_id(self):
-    #     """Validates contextual field injection routing during file ingestion stages."""
-    #     category = Category.objects.create(name="Outros", slug="outros")
-    #     temp_ad = TemporaryAd.objects.create(product_name="Draft", category=category)
+    def test_create_injects_context_temp_ad_id(self):
+        """Validates contextual field injection routing during file ingestion stages."""
+        category = Category.objects.create(name="Outros", slug="outros")
+        temp_ad = TemporaryAd.objects.create(product_name="Draft", category=category)
         
-    #     mock_file = SimpleUploadedFile("pic.jpg", b"raw_data", content_type="image/jpeg")
-    #     data = {"image": mock_file, "caption": "Side profile", "order": 1}
+        # A valid 1x1 transparent pixel GIF binary structure
+        valid_gif_pixel = (
+            b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00'
+            b'\xff\xff\xff\x21\xf9\x04\x01\x00\x00\x00\x00\x2c\x00\x00\x00\x00'
+            b'\x01\x00\x01\x00\x00\x02\x02\x4c\x01\x00\x3b'
+        )
         
-    #     # Inject standard multi-step context needed by the serializer create method
-    #     serializer = TemporaryAdImageSerializer(
-    #         data=data, 
-    #         context={"temp_ad_id": temp_ad.id}
-    #     )
+        # Use the valid image binary instead of raw text
+        mock_file = SimpleUploadedFile("pic.gif", valid_gif_pixel, content_type="image/gif")
+        data = {"image": mock_file, "caption": "Side profile", "order": 1}
         
-    #     self.assertTrue(serializer.is_valid(), serializer.errors)
-    #     img_instance = serializer.save()
-    #     self.assertEqual(img_instance.temporary_ad_id, temp_ad.id)
-    pass
+        serializer = TemporaryAdImageSerializer(
+            data=data, 
+            context={"temp_ad_id": temp_ad.id}
+        )
+        
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        img_instance = serializer.save()
+        self.assertEqual(img_instance.temporary_ad_id, temp_ad.id)
+
 
 class AdCreateSerializerValidationTest(TestCase):
     def setUp(self):
