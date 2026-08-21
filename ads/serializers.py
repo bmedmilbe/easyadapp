@@ -78,8 +78,6 @@ class AdCreateSerializer(serializers.ModelSerializer):
         if not temp.temporary_images.exists():
             raise ValidationError({"images": "At least one image is required."})
 
-        # Save the fetched object in attrs context to avoid querying it again during create()
-        attrs['temp_ad_object'] = temp
         return attrs
     
     def create(self, validated_data):
@@ -87,16 +85,17 @@ class AdCreateSerializer(serializers.ModelSerializer):
         Create a new ad from temp ad with the customer context.
         """
         # Safe access to profile via user context injected into views
-        request = self.context.get('request')
-        if not request or not request.user.is_authenticated:
+        customer_id = self.context.get('customer_id')
+        if not customer_id:
             raise ValidationError({"detail": "Authentication required."})
-            
+
         try:
-            customer = CustomerProfile.objects.get(user=request.user)
+            customer = CustomerProfile.objects.get(pk=customer_id)
         except CustomerProfile.DoesNotExist:
             raise ValidationError({"detail": "User profile not found. Complete your profile before publishing."})
             
-        temp_ad = validated_data["temp_ad_object"]
+        temp_ad = TemporaryAd.objects.get(pk=validated_data["temp_ad_id"])
+
         return temp_ad.transfer_to_official_ad(customer_profile=customer)
 
 
