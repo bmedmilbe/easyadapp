@@ -19,6 +19,7 @@ class User(AbstractUser):
     
     
     USERNAME_FIELD = 'mobile_number'
+    REQUIRED_FIELDS = ["username"]
     
     class Meta:
         verbose_name = 'User'
