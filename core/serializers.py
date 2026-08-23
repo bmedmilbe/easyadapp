@@ -70,7 +70,7 @@ class UserCreateSerializer(UserCreateSerializer):
         validated_data['password'] = pin
         user = super().create(validated_data)
         user._generated_pin = pin
-        
+        print(pin)
         return user
 
 
