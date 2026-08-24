@@ -8,6 +8,7 @@ from djoser.serializers import (
 from rest_framework import serializers
 
 from .models import User
+from .utils import send_pin_sms
 
 
 class UserSerializer(UserSerializer):
@@ -75,6 +76,9 @@ class UserCreateSerializer(UserCreateSerializer):
         validated_data["username"] = validated_data["mobile_number"]
         validated_data["password"] = pin
         user = super().create(validated_data)
-        user._generated_pin = pin
+        
+        
         print(pin)
+        send_pin_sms(validated_data["mobile_number"],
+                     pin)
         return user
