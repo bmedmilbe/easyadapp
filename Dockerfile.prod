@@ -26,7 +26,7 @@ COPY Pipfile Pipfile.lock  ./
 RUN pipenv install --system --skip-lock
 
 COPY . .
-
+ENV ALLOWED_HOSTS="localhost"
 RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
