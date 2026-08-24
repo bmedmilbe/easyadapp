@@ -28,25 +28,31 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     Read-only viewset for categories.
     Publicly accessible.
     """
+
     permission_classes = [AllowAny]
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    lookup_field = 'slug'
+    lookup_field = "slug"
 
 
 class AdViewViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Publicly accessible Read-Only ViewSet for listing and retrieving ads.
     """
+
     queryset = Ad.objects.all()
     permission_classes = [AllowAny]
-    filter_backends = [filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter]
-    
+    filter_backends = [
+        filters.SearchFilter,
+        DjangoFilterBackend,
+        filters.OrderingFilter,
+    ]
+
     filterset_fields = {
-        'status': ['exact'], 
-        'is_featured': ['exact'],
-        'price': ['exact', 'gt', 'lte'],
-        'condition': ['exact'], 
+        "status": ["exact"],
+        "is_featured": ["exact"],
+        "price": ["exact", "gt", "lte"],
+        "condition": ["exact"],
     }
     serializer_class = AdSerializer
 
@@ -55,26 +61,31 @@ class AdManageViewSet(viewsets.ModelViewSet):
     """
     ViewSet for authenticated users to manage (list,add, edit, delete) their own ads.
     """
+
     queryset = Ad.objects.all()
     permission_classes = [permissions.IsAuthenticated]
-    
-    # Restrict to only add, edit, and delete actions
-    http_method_names = ['post', 'get', 'put', 'patch', 'delete']
 
-    filter_backends = [filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter]
-    
+    # Restrict to only add, edit, and delete actions
+    http_method_names = ["post", "get", "put", "patch", "delete"]
+
+    filter_backends = [
+        filters.SearchFilter,
+        DjangoFilterBackend,
+        filters.OrderingFilter,
+    ]
+
     search_fields = [
-        "product_name", 
+        "product_name",
         "description",
         "category__name",
         "category__description",
     ]
 
     filterset_fields = {
-        'status': ['exact'], 
-        'is_featured': ['exact'],
-        'price': ['exact', 'gt', 'lte'],
-        'condition': ['exact'], 
+        "status": ["exact"],
+        "is_featured": ["exact"],
+        "price": ["exact", "gt", "lte"],
+        "condition": ["exact"],
     }
 
     def get_queryset(self):
@@ -84,7 +95,7 @@ class AdManageViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if not user or user.is_anonymous:
             return Ad.objects.none()
-            
+
         try:
             customer = CustomerProfile.objects.get(user=user)
             return Ad.objects.filter(customer_id=customer.id)
@@ -95,10 +106,10 @@ class AdManageViewSet(viewsets.ModelViewSet):
         if self.request.method == "POST":
             return AdCreateSerializer
         return AdSerializer
-    
+
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        
+
         if self.request.user.is_authenticated:
             try:
                 customer = CustomerProfile.objects.get(user=self.request.user)
@@ -106,7 +117,7 @@ class AdManageViewSet(viewsets.ModelViewSet):
             except CustomerProfile.DoesNotExist:
                 context["customer_id"] = None
 
-        context["temp_ad_id"] = self.kwargs.get('temporary_ad_pk')
+        context["temp_ad_id"] = self.kwargs.get("temporary_ad_pk")
         return context
 
 
@@ -114,44 +125,47 @@ class AdImageViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing images on official ads.
     """
+
     serializer_class = AdImageSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
-    
+
     def get_queryset(self):
         """
         Filter images by the parent ad.
         """
-        ad_id = self.kwargs.get('ad_pk')
+        ad_id = self.kwargs.get("ad_pk")
         return AdImage.objects.filter(ad_id=ad_id)
-    
 
-class TemporaryAdViewSet(mixins.CreateModelMixin,
-                         mixins.RetrieveModelMixin,
-                         viewsets.GenericViewSet):
+
+class TemporaryAdViewSet(
+    mixins.CreateModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
     """
     ViewSet for temporary ads (guest flow).
     Allows ONLY creation (POST) and retrieval (GET detail).
     """
+
     serializer_class = TemporaryAdSerializer
     permission_classes = [AllowAny]
     queryset = TemporaryAd.objects.all()
 
-    
+
 class TemporaryAdImageViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing images on temporary ads.
     """
+
     serializer_class = TemporaryAdImageSerializer
     permission_classes = [AllowAny]
-    
+
     def get_queryset(self):
         """
         Filter temporary images by the parent temporary ad.
         """
-        temp_ad_id = self.kwargs.get('temporary_ad_pk')
+        temp_ad_id = self.kwargs.get("temporary_ad_pk")
         return TemporaryAdImage.objects.filter(temporary_ad_id=temp_ad_id)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context["temp_ad_id"] = self.kwargs.get('temporary_ad_pk')
+        context["temp_ad_id"] = self.kwargs.get("temporary_ad_pk")
         return context

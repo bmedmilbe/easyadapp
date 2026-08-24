@@ -22,11 +22,15 @@ django-storages = "*"
 boto3 = "*"
 djangorestframework-simplejwt = "*"
 django-filter = "*"
+pytest = "*"
+pytest-django = "*"
+pytest-cov = "*"
 
 [dev-packages]
 pytest = "*"
 pytest-django = "*"
 pytest-cov = "*"
+ruff = "*"
 
 [requires]
 python_version = "3.10"

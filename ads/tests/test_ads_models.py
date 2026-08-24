@@ -1,6 +1,12 @@
 from datetime import timedelta
 from decimal import Decimal
 
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase
+from django.utils import timezone
+
 from ads.models import (
     Ad,
     AdCondition,
@@ -11,11 +17,6 @@ from ads.models import (
     TemporaryAdImage,
     default_expiration_date,
 )
-from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
-from django.utils import timezone
 
 User = get_user_model()
 
@@ -24,9 +25,7 @@ class CustomerProfileModelTest(TestCase):
     def setUp(self):
         # Create user with a mobile number attribute matching model design
         self.user = User.objects.create_user(
-            mobile_number = "+2399912345",
-            username="testuser",
-            password="password123"
+            mobile_number="+2399912345", username="testuser", password="password123"
         )
         self.user.save()
 
@@ -44,17 +43,17 @@ class CustomerProfileModelTest(TestCase):
         self.user.save()
         self.assertEqual(self.user.profile.whatsapp_link, "https://wa.me/2399912345")
 
-    
-
-    
-
 
 class CategoryModelTest(TestCase):
     def test_category_creation_and_string_representation(self):
         """Ensures subcategories link correctly and custom emojis render."""
-        parent_cat = Category.objects.create(name="Eletrónicos", slug="eletronicos", icon="💻")
-        child_cat = Category.objects.create(name="Telemóveis", slug="telemoveis", parent=parent_cat)
-        
+        parent_cat = Category.objects.create(
+            name="Eletrónicos", slug="eletronicos", icon="💻"
+        )
+        child_cat = Category.objects.create(
+            name="Telemóveis", slug="telemoveis", parent=parent_cat
+        )
+
         self.assertEqual(str(parent_cat), "💻 Eletrónicos")
         self.assertEqual(str(child_cat), "📁 Telemóveis")
         self.assertIn(child_cat, parent_cat.subcategories.all())
@@ -62,7 +61,9 @@ class CategoryModelTest(TestCase):
 
 class AdModelTest(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(mobile_number = "+239999999", username = "+239999999", password="password")
+        self.user = User.objects.create_user(
+            mobile_number="+239999999", username="+239999999", password="password"
+        )
         self.user.save()
         self.category = Category.objects.create(name="Imóveis", slug="imoveis")
 
@@ -70,7 +71,9 @@ class AdModelTest(TestCase):
         """Validates the expiration helper returns a timeframe 7 days away."""
         now = timezone.now()
         expr = default_expiration_date()
-        self.assertTrue(now + timedelta(days=6, hours=23) < expr < now + timedelta(days=7, hours=1))
+        self.assertTrue(
+            now + timedelta(days=6, hours=23) < expr < now + timedelta(days=7, hours=1)
+        )
 
     def test_ad_creation_defaults(self):
         """Validates standard defaults such as active status and pricing structures."""
@@ -78,7 +81,7 @@ class AdModelTest(TestCase):
             customer=self.user.profile,
             category=self.category,
             product_name="Casa de Praia",
-            price=Decimal("1500.00")
+            price=Decimal("1500.00"),
         )
         self.assertEqual(ad.status, AdStatus.ACTIVE)
         self.assertEqual(ad.condition, AdCondition.NEW)
@@ -90,7 +93,7 @@ class AdModelTest(TestCase):
         ad = Ad.objects.create(
             customer=self.user.profile,
             product_name="Item Antigo",
-            expires_at=timezone.now() - timedelta(hours=1)
+            expires_at=timezone.now() - timedelta(hours=1),
         )
         self.assertTrue(ad.is_expired())
 
@@ -99,7 +102,7 @@ class AdModelTest(TestCase):
         ad = Ad.objects.create(
             customer=self.user.profile,
             product_name="Expirado",
-            expires_at=timezone.now() - timedelta(days=1)
+            expires_at=timezone.now() - timedelta(days=1),
         )
         # Check that override logic triggers status transition
         self.assertEqual(ad.status, AdStatus.EXPIRED)
@@ -107,15 +110,15 @@ class AdModelTest(TestCase):
 
 class TemporaryAdModelTest(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(mobile_number = "+239999999", username = "+239999999", password="password")
+        self.user = User.objects.create_user(
+            mobile_number="+239999999", username="+239999999", password="password"
+        )
         self.user.save()
         self.category = Category.objects.create(name="Moda", slug="moda")
-        
+
         # Mock Image
         self.mock_image = SimpleUploadedFile(
-            name='test_image.jpg', 
-            content=b'file_content', 
-            content_type='image/jpeg'
+            name="test_image.jpg", content=b"file_content", content_type="image/jpeg"
         )
 
     def test_transfer_to_official_ad_success(self):
@@ -124,13 +127,10 @@ class TemporaryAdModelTest(TestCase):
             product_name="T-Shirt",
             description="Nice cotton shirt",
             price=Decimal("250.00"),
-            category=self.category
+            category=self.category,
         )
         TemporaryAdImage.objects.create(
-            temporary_ad=temp_ad,
-            image=self.mock_image,
-            caption="Front View",
-            order=1
+            temporary_ad=temp_ad, image=self.mock_image, caption="Front View", order=1
         )
 
         # Action: Migrating production records
@@ -141,7 +141,7 @@ class TemporaryAdModelTest(TestCase):
         self.assertEqual(official_ad.product_name, "T-Shirt")
         self.assertEqual(official_ad.customer, self.user.profile)
         self.assertEqual(official_ad.category, self.category)
-        
+
         # Assertions for image translations
         self.assertEqual(AdImage.objects.count(), 1)
         migrated_img = AdImage.objects.first()
@@ -154,9 +154,9 @@ class TemporaryAdModelTest(TestCase):
     def test_transfer_to_official_ad_invalid_profile(self):
         """Throws explicit ValidationErrors if user data structures are corrupt."""
         temp_ad = TemporaryAd.objects.create(product_name="Error Test")
-        
+
         with self.assertRaises(ValidationError):
             temp_ad.transfer_to_official_ad(None)
-            
+
         with self.assertRaises(ValidationError):
             temp_ad.transfer_to_official_ad("not-a-profile-instance")

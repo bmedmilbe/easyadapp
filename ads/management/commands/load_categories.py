@@ -1,11 +1,12 @@
 # ads/management/commands/load_categories.py
-from ads.models import Category
 from django.core.management.base import BaseCommand
 from django.utils.text import slugify
 
+from ads.models import Category
+
 
 class Command(BaseCommand):
-    help = 'Load initial categories into the database'
+    help = "Load initial categories into the database"
 
     def handle(self, *args, **options):
         categories = [
@@ -70,15 +71,19 @@ class Command(BaseCommand):
         ]
 
         for category in categories:
-            obj, created = Category.objects.get_or_create(
+            _, created = Category.objects.get_or_create(
                 name=category["name"],
                 defaults={
                     "slug": slugify(category["name"]),
                     "icon": category["icon"],
-                    "description": f"Produtos da categoria {category['name']}"
-                }
+                    "description": f"Produtos da categoria {category['name']}",
+                },
             )
             if created:
-                self.stdout.write(f"✅ Created category: {category['icon']} {category['name']}")
+                self.stdout.write(
+                    f"✅ Created category: {category['icon']} {category['name']}"
+                )
             else:
-                self.stdout.write(f"⏭️  Category already exists: {category['icon']} {category['name']}")
+                self.stdout.write(
+                    f"⏭️  Category already exists: {category['icon']} {category['name']}"
+                )

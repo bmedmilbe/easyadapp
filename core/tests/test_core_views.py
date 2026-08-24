@@ -1,25 +1,30 @@
-from core.models import User
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from core.models import User
+
 
 class TestCoreViews(APITestCase):
-
     def setUp(self):
         self.register_url = "/api/auth/users/"
         self.login_url = "/api/auth/jwt/create/"  # Adjust URL based on your auth library (e.g., Simple JWT: /api/token/)
-        self.valid_data = {"mobile_number": "+2399882053", "password": "securepassword123"}
+        self.valid_data = {
+            "mobile_number": "+2399882053",
+            "password": "securepassword123",
+        }
 
     def test_core_api_create_account(self):
         """Ensure we can create a new account object and verify DB state."""
         response = self.client.post(self.register_url, self.valid_data, format="json")
-        
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(User.objects.count(), 1)
-        
+
         # Verify response matches sent payload (ignoring password which shouldn't be returned raw)
-        self.assertEqual(response.data["mobile_number"], self.valid_data["mobile_number"])
-        
+        self.assertEqual(
+            response.data["mobile_number"], self.valid_data["mobile_number"]
+        )
+
         # Verify database fields
         user = User.objects.get()
         self.assertEqual(user.username, "+2399882053")
@@ -31,12 +36,12 @@ class TestCoreViews(APITestCase):
         User.objects.create_user(
             username=self.valid_data["mobile_number"],
             mobile_number=self.valid_data["mobile_number"],
-            password=self.valid_data["password"]
+            password=self.valid_data["password"],
         )
-        
+
         # Try to register again with same data
         response = self.client.post(self.register_url, self.valid_data, format="json")
-        
+
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(User.objects.count(), 1)  # No new user added
 
@@ -46,17 +51,17 @@ class TestCoreViews(APITestCase):
         User.objects.create_user(
             username=self.valid_data["mobile_number"],
             mobile_number=self.valid_data["mobile_number"],
-            password=self.valid_data["password"]
+            password=self.valid_data["password"],
         )
 
         # Login payload matching what your backend expects (usually username or mobile_number)
         login_data = {
-            "mobile_number": self.valid_data["mobile_number"], 
-            "password": self.valid_data["password"]
+            "mobile_number": self.valid_data["mobile_number"],
+            "password": self.valid_data["password"],
         }
-        
+
         response = self.client.post(self.login_url, login_data, format="json")
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # Verify an auth token or access token is returned
         self.assertIn("access", response.data)  # Change to "access" if using Simple JWT
@@ -66,15 +71,15 @@ class TestCoreViews(APITestCase):
         User.objects.create_user(
             username=self.valid_data["mobile_number"],
             mobile_number=self.valid_data["mobile_number"],
-            password=self.valid_data["password"]
+            password=self.valid_data["password"],
         )
 
         invalid_login_data = {
             "username": self.valid_data["mobile_number"],
-            "password": "wrongpassword"
+            "password": "wrongpassword",
         }
-        
+
         response = self.client.post(self.login_url, invalid_login_data, format="json")
-        
+
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertNotIn("access", response.data)
