@@ -1,60 +1,44 @@
 import os
 
 import dj_database_url
+from dotenv import find_dotenv, load_dotenv
 
 from .common import *
 
+# Force python-dotenv to find the file and override any empty terminal variables
+load_dotenv(find_dotenv(), override=True)
 # --- CORE SETTINGS ---
-DEBUG = False
-ALLOWED_HOSTS = os.environ["ALLOWED_HOSTS"].split(" ")
-DJANGO_SETTINGS_MODULE = os.environ["DJANGO_SETTINGS_MODULE"]
-SECRET_KEY = os.environ["SECRET_KEY"]
+# Safely convert DEBUG string to boolean, defaulting to False
+# DEBUG = True
+DEBUG = os.environ.get("DEBUG", "False").lower() in ("true", "1", "t")
+print(DEBUG)
+SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-default-change-me-in-production")
+
+# Defaulting split strings to empty lists or local defaults to avoid crashes
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost 127.0.0.1").split(" ")
+
+DJANGO_SETTINGS_MODULE = os.environ.get("DJANGO_SETTINGS_MODULE", "myproject.settings.local")
 
 # --- DATABASE ---
-DATABASES = {"default": dj_database_url.config()}
-
-# --- EMAIL SETTINGS ---
-DOMAIN = os.environ["WEBSITE_FRONT"]
-WEBSITE = DOMAIN
-EMAIL_HOST = "smtp.gmail.com"
-EMAIL_HOST_USER = os.environ["EMAIL_HOST_USER"]
-EMAIL_HOST_PASSWORD = os.environ["EMAIL_HOST_PASSWORD"]
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-
+# Falls back to an in-memory SQLite database if no URL is provided
+DEFAULT_DB_URL = "sqlite:///:memory:"
+DATABASES = {"default": dj_database_url.config(default=os.environ.get("DATABASE_URL", DEFAULT_DB_URL))}
+print(DATABASES)
 # --- AWS S3 STORAGE ---
-AWS_ACCESS_KEY_ID = os.environ["AWS_ACCESS_KEY_ID"]
-AWS_SECRET_ACCESS_KEY = os.environ["AWS_SECRET_ACCESS_KEY"]
-AWS_STORAGE_BUCKET_NAME = os.environ["AWS_STORAGE_BUCKET_NAME"]
-AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com" 
+AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID", "default_aws_key")
+AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY", "default_aws_secret")
+AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME", "default-bucket-name")
+AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
 
 # --- EXTERNAL API (TEXT EXPERT) ---
-TEXT_EXPERT_USERNAME = os.environ["TEXT_EXPERT_USERNAME"]
-TEXT_EXPERT_PASSWORD = os.environ["TEXT_EXPERT_PASSWORD"]
-TEXT_EXPERT_API_KEY = os.environ["TEXT_EXPERT_API_KEY"]
+TEXT_EXPERT_USERNAME = os.environ.get("TEXT_EXPERT_USERNAME", "default_user")
+TEXT_EXPERT_PASSWORD = os.environ.get("TEXT_EXPERT_PASSWORD", "default_password")
+TEXT_EXPERT_API_KEY = os.environ.get("TEXT_EXPERT_API_KEY", "default_api_key")
 
-# --- SECURITY UTILITIES ---
-def get_env_list(var_name, default=""):
-    """Extracts a clean list of origins from environment variables."""
-    value = os.environ.get(var_name, default)
-    if isinstance(value, list) or isinstance(value, tuple):
-        return list(value)
-    return [origin.strip() for origin in value.split(",") if origin.strip()]
-
-# --- GLOBAL CORS RULES ---
-# Allows developers to query this live API via javascript from localhost
+# --- SECURITY & COOKIES ---
 CORS_ALLOW_ALL_ORIGINS = True
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_HTTPONLY = False
 
-# --- CSRF & COOKIE SECURITY FOR LIVE ADMIN ---
-# Keeps the admin panel secure over HTTPS while allowing trusted cross-origin interaction
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_HTTPONLY = True
-
-# Explicitly trust the production domain (for admin login) and local web servers
-CSRF_TRUSTED_ORIGINS = [
-    "https://easyadapp-production.up.railway.app",  # Your admin panel URL
-    "http://localhost:3000",                        # Local React/Vite development apps
-    "http://127.0.0.1:3000",                       # Local host IP fallbacks
-    "http://localhost:5173",                        # Common fallback Vite server port
-] + get_env_list("CORS_ALLOWED_ORIGINS", default=[])
+CSRF_TRUSTED_ORIGINS = os.environ.get("CSRF_TRUSTED_ORIGINS", "http://localhost:8000 http://127.0.0.1:8000").split(" ")

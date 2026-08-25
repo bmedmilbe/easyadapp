@@ -1,34 +1,61 @@
-FROM python:3.10-slim
+# --- Stage 1: Build dependencies ---
+FROM python:3.10-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-# Change to your production settings module
-ENV DJANGO_SETTINGS_MODULE=easyad.settings.prod 
 
 WORKDIR /app
 
-# 1. Install build tools AND runtime dependencies
+# Install compilation tools needed for wheels
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    python3-dev \
+    pkg-config \
     libpq-dev \
     libjpeg-dev \
     zlib1g-dev \
     libcairo2-dev \
-    gcc \
-    python3-dev \
-    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Upgrade pip and install gunicorn
-RUN pip install --no-cache-dir --upgrade pip pipenv gunicorn
+RUN pip install --no-cache-dir --upgrade pip pipenv
 
-COPY Pipfile Pipfile.lock  ./
-# Remove --skip-lock for production to ensure reproducible builds
-RUN pipenv install --system --skip-lock
+COPY Pipfile Pipfile.lock ./
 
+# Install packages globally in the builder stage
+RUN pipenv install --system --deploy
+
+# --- Stage 2: Final Runtime Image ---
+FROM python:3.10-slim AS runner
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV DJANGO_SETTINGS_MODULE=easyad.settings.prod
+ENV PYTHONPATH=/app
+
+WORKDIR /app
+
+# Install only shared runtime libraries (no compilers)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    libjpeg62-turbo \
+    zlib1g \
+    libcairo2 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir gunicorn
+
+# Copy installed Python packages from the builder stage
+COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Copy project files
 COPY . .
 
+# Prepare static files directory and compile assets
+RUN mkdir -p /app/easyad/staticfiles
+RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
 
-# 4. Use Gunicorn instead of runserver
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "easyad.wsgi:application"]
+# Use a safe shell form to sequence migration and application boot
+CMD python manage.py migrate && gunicorn --bind 0.0.0.0:8000 easyad.wsgi:application
