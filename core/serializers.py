@@ -76,9 +76,6 @@ class UserCreateSerializer(UserCreateSerializer):
         validated_data["username"] = validated_data["mobile_number"]
         validated_data["password"] = pin
         user = super().create(validated_data)
-        
-        
         print(pin)
-        send_pin_sms(validated_data["mobile_number"],
-                     pin)
+        send_pin_sms(validated_data["mobile_number"], pin)
         return user

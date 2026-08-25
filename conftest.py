@@ -10,15 +10,14 @@ def use_dummy_storage(settings):
     """
     settings.STORAGES = {
         # Keeps user-uploaded media files in-memory during testing
-        "default": {
-            "BACKEND": "django.core.files.storage.InMemoryStorage"
-        },
+        "default": {"BACKEND": "django.core.files.storage.InMemoryStorage"},
         # Correct path for static files (CSS/JS) required by Django and WhiteNoise
         "staticfiles": {
             "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
         },
     }
-    
     # Backwards compatibility flags for legacy setups
     settings.DEFAULT_FILE_STORAGE = "django.core.files.storage.InMemoryStorage"
-    settings.STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
+    settings.STATICFILES_STORAGE = (
+        "django.contrib.staticfiles.storage.StaticFilesStorage"
+    )

@@ -45,7 +45,7 @@ class AdAdmin(admin.ModelAdmin):
     Admin configuration for the Ad model.
     """
 
-    inlines = [AdImageInline] 
+    inlines = [AdImageInline]  # fmt: skip
 
     # Display fields in the list view
     list_display = (

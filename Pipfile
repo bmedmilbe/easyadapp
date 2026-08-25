@@ -25,6 +25,7 @@ django-filter = "*"
 pytest = "*"
 pytest-django = "*"
 pytest-cov = "*"
+ruff = "*"
 
 [dev-packages]
 pytest = "*"
