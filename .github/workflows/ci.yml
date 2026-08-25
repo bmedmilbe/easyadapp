@@ -28,7 +28,6 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
-          cd app
           docker pull $IMAGE:latest || true
           docker build \
             --cache-from $IMAGE:latest \
@@ -73,4 +72,4 @@ jobs:
             --network host \
             -e DATABASE_URL="postgresql://runner:runner@127.0.0.1:5432/users" \
             $IMAGE:latest \
-            sh -c "cd app && pytest -p no:warnings --cov=. && ruff check . && ruff format --check ."
+            sh -c "pytest -p no:warnings --cov=. && ruff check . && ruff format --check ."
