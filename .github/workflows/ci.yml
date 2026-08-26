@@ -76,7 +76,7 @@ jobs:
             --network host \
             -e DATABASE_URL="postgresql://runner:runner@127.0.0.1:5432/users" \
             $IMAGE:latest \
-            sh -c "pip install ruff pytest pytest-django pytest-cov && pytest -p no:warnings --cov=. && ruff check . && ruff format --check ."
+            sh -c "pip install ruff pytest pytest-django pytest-cov && python -m pytest -p no:warnings --cov=. && python -m ruff check . && python -m ruff format --check ."
   deploy:
     needs: test
     runs-on: ubuntu-latest
