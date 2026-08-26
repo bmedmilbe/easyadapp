@@ -53,7 +53,14 @@ COPY . .
 
 # Prepare static files directory and compile assets
 RUN mkdir -p /app/easyad/staticfiles
+
+RUN adduser --disabled-password myuser
+
+RUN chown -R myuser:myuser /app
+
 RUN python manage.py collectstatic --noinput
+
+USER myuser
 
 EXPOSE 8000
 
