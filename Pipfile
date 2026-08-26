@@ -16,16 +16,10 @@ drf-nested-routers = "==0.95.0"
 gunicorn = "*"
 pyhtml2pdf = "*"
 drf-spectacular = "*"
-redis = {extras = ["hiredis"], version = "*"}
-django-redis = "*"
 django-storages = "*"
 boto3 = "*"
 djangorestframework-simplejwt = "*"
 django-filter = "*"
-pytest = "*"
-pytest-django = "*"
-pytest-cov = "*"
-ruff = "*"
 
 [dev-packages]
 pytest = "*"
