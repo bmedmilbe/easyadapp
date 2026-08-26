@@ -55,6 +55,10 @@ COPY . .
 RUN mkdir -p /app/easyad/staticfiles
 RUN python manage.py collectstatic --noinput
 
+# add and run as non-root user
+RUN adduser --disabled-password myuser
+USER myuser
+
 EXPOSE 8000
 
 # Use a safe shell form to sequence migration and application boot
