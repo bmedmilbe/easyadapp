@@ -19,15 +19,13 @@ class User(AbstractUser):
         ("DIASPORA", "Diáspora"),
     ]
     district = models.CharField(max_length=255, choices=DISTRICT_CHOICES)
-    
+
     mobile_number = models.CharField(
         max_length=20,
         unique=True,
         verbose_name="Mobile Number",
         help_text="Format: +4475836648484",
     )
-
-
 
     USERNAME_FIELD = "mobile_number"
     REQUIRED_FIELDS = ["username"]

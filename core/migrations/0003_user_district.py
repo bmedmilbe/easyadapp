@@ -4,16 +4,28 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('core', '0002_alter_user_managers'),
+        ("core", "0002_alter_user_managers"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='user',
-            name='district',
-            field=models.CharField(choices=[('AGUA_GRANDE', 'Água Grande'), ('MEZOCHI', 'Mé-Zóchi'), ('LEMBA', 'Lembá'), ('CAUE', 'Cauê'), ('LOBATA', 'Lobata'), ('CANTAGALO', 'Cantagalo'), ('RAP', 'Região Autonoma de Príncipe'), ('DIASPORA', 'Diáspora')], default=1, max_length=255),
+            model_name="user",
+            name="district",
+            field=models.CharField(
+                choices=[
+                    ("AGUA_GRANDE", "Água Grande"),
+                    ("MEZOCHI", "Mé-Zóchi"),
+                    ("LEMBA", "Lembá"),
+                    ("CAUE", "Cauê"),
+                    ("LOBATA", "Lobata"),
+                    ("CANTAGALO", "Cantagalo"),
+                    ("RAP", "Região Autonoma de Príncipe"),
+                    ("DIASPORA", "Diáspora"),
+                ],
+                default=1,
+                max_length=255,
+            ),
             preserve_default=False,
         ),
     ]

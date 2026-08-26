@@ -7,11 +7,11 @@ from core.models import User
 class TestCoreViews(APITestCase):
     def setUp(self):
         self.register_url = "/api/auth/users/"
-        self.login_url = "/api/auth/jwt/create/"  # Adjust URL based on your auth library (e.g., Simple JWT: /api/token/)
+        self.login_url = "/api/auth/jwt/create/"
         self.valid_data = {
             "mobile_number": "+2399882053",
             "password": "securepassword123",
-             "district":"AGUA_GRANDE"
+            "district": "AGUA_GRANDE",
         }
 
     def test_core_api_create_account(self):
@@ -36,10 +36,8 @@ class TestCoreViews(APITestCase):
         """Ensure a user cannot register with an existing mobile number."""
         # Create initial user
         User.objects.create_user(
+            **self.valid_data,
             username=self.valid_data["mobile_number"],
-            mobile_number=self.valid_data["mobile_number"],
-            password=self.valid_data["password"],
-            district=self.valid_data["district"]
         )
 
         # Try to register again with same data
@@ -52,10 +50,8 @@ class TestCoreViews(APITestCase):
         """Ensure an existing user can log in with correct credentials."""
         # Pre-create the user in the database
         User.objects.create_user(
+            **self.valid_data,
             username=self.valid_data["mobile_number"],
-            mobile_number=self.valid_data["mobile_number"],
-            password=self.valid_data["password"],
-            district=self.valid_data["district"]
         )
 
         # Login payload matching what your backend expects (usually username or mobile_number)
@@ -73,11 +69,8 @@ class TestCoreViews(APITestCase):
     def test_login_invalid_credentials(self):
         """Ensure login fails with wrong password."""
         User.objects.create_user(
+            **self.valid_data,
             username=self.valid_data["mobile_number"],
-            mobile_number=self.valid_data["mobile_number"],
-            password=self.valid_data["password"],
-            district=self.valid_data["district"]
-
         )
 
         invalid_login_data = {

@@ -21,12 +21,20 @@ from ads.models import (
 User = get_user_model()
 
 
+def create_new_valid_user():
+    user = User.objects.create_user(
+        mobile_number="+2399912345",
+        username="testuser",
+        district="AGUA_GRANDE",
+        password="password123",
+    )
+    return user
+
+
 class CustomerProfileModelTest(TestCase):
     def setUp(self):
         # Create user with a mobile number attribute matching model design
-        self.user = User.objects.create_user(
-            mobile_number="+2399912345", username="testuser",district="AGUA_GRANDE", password="password123"
-        )
+        self.user = create_new_valid_user()
         self.user.save()
 
     def test_profile_string_representation(self):
@@ -61,9 +69,7 @@ class CategoryModelTest(TestCase):
 
 class AdModelTest(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
-            mobile_number="+239999999", username="+239999999",district="AGUA_GRANDE", password="password"
-        )
+        self.user = create_new_valid_user()
         self.user.save()
         self.category = Category.objects.create(name="Imóveis", slug="imoveis")
 
@@ -86,7 +92,7 @@ class AdModelTest(TestCase):
         self.assertEqual(ad.status, AdStatus.ACTIVE)
         self.assertEqual(ad.condition, AdCondition.NEW)
         self.assertFalse(ad.is_featured)
-        self.assertEqual(str(ad), "Casa de Praia - +239999999")
+        self.assertEqual(str(ad), "Casa de Praia - +2399912345")
 
     def test_is_expired_method(self):
         """Validates if expired ads correctly mark themselves."""
@@ -110,9 +116,7 @@ class AdModelTest(TestCase):
 
 class TemporaryAdModelTest(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
-            mobile_number="+239999999", username="+239999999",district="AGUA_GRANDE", password="password"
-        )
+        self.user = create_new_valid_user()
         self.user.save()
         self.category = Category.objects.create(name="Moda", slug="moda")
 
