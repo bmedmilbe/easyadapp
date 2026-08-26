@@ -11,7 +11,7 @@ load_dotenv(find_dotenv(), override=True)
 # Safely convert DEBUG string to boolean, defaulting to False
 # DEBUG = True
 DEBUG = os.environ.get("DEBUG", "False").lower() in ("true", "1", "t")
-print(DEBUG)
+
 SECRET_KEY = os.environ.get(
     "SECRET_KEY", "django-insecure-default-change-me-in-production"
 )
@@ -31,7 +31,7 @@ DATABASES = {
         default=os.environ.get("DATABASE_URL", DEFAULT_DB_URL)
     )
 }
-print(DATABASES)
+
 # --- AWS S3 STORAGE ---
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID", "default_aws_key")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY", "default_aws_secret")
