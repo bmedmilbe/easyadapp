@@ -89,6 +89,6 @@ jobs:
         run: npm install -g @railway/cli
 
       - name: Trigger Railway Redeploy
-        run: railway redeploy --detach
+        run: railway redeploy -y
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
