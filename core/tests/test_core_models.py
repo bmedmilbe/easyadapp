@@ -7,11 +7,13 @@ from core.models import User
 @pytest.mark.django_db
 class TestCoreModels:
     def test_create_new_user(self):
+        
         # Given
         data = {
             "mobile_number": "+2399882053",
             "username": "+2399882053",
             "password": "password123",
+            "district": "AGUA_GRANDE",
         }
 
         # Act
@@ -20,7 +22,9 @@ class TestCoreModels:
 
         # Then
         assert users_count == 1
-        saved_user.mobile_number = data["mobile_number"]
+        assert saved_user.mobile_number == data["mobile_number"]
+        assert saved_user.district == data["district"]
+        
 
     def test_create_new_user_wrong_number(self):
         # Given

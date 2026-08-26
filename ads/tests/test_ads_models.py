@@ -25,7 +25,7 @@ class CustomerProfileModelTest(TestCase):
     def setUp(self):
         # Create user with a mobile number attribute matching model design
         self.user = User.objects.create_user(
-            mobile_number="+2399912345", username="testuser", password="password123"
+            mobile_number="+2399912345", username="testuser",district="AGUA_GRANDE", password="password123"
         )
         self.user.save()
 
@@ -62,7 +62,7 @@ class CategoryModelTest(TestCase):
 class AdModelTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-            mobile_number="+239999999", username="+239999999", password="password"
+            mobile_number="+239999999", username="+239999999",district="AGUA_GRANDE", password="password"
         )
         self.user.save()
         self.category = Category.objects.create(name="Imóveis", slug="imoveis")
@@ -111,7 +111,7 @@ class AdModelTest(TestCase):
 class TemporaryAdModelTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-            mobile_number="+239999999", username="+239999999", password="password"
+            mobile_number="+239999999", username="+239999999",district="AGUA_GRANDE", password="password"
         )
         self.user.save()
         self.category = Category.objects.create(name="Moda", slug="moda")

@@ -34,10 +34,10 @@ def create_user(django_user_model):
     """Factory fixture to quickly spin up testing users."""
 
     def make_user(
-        username="testuser", password="password123", mobile_number="+239995555"
+        username="testuser", password="password123", mobile_number="+239995555",district="AGUA_GRANDE"
     ):
         return django_user_model.objects.create_user(
-            username=username, password=password, mobile_number=mobile_number
+            username=username, password=password, mobile_number=mobile_number, district=district
         )
 
     return make_user
@@ -47,7 +47,7 @@ def create_user(django_user_model):
 def customer_profile(create_user):
     """Creates a regular testing user accompanied by a profile."""
     user = create_user(
-        username="customer_user", password="password123", mobile_number="+239995555"
+        username="customer_user", password="password123", mobile_number="+239995555",district="AGUA_GRANDE"
     )
     return user.profile
 
@@ -56,7 +56,7 @@ def customer_profile(create_user):
 def other_customer_profile(create_user):
     """Creates an isolated second profile to test query separation."""
     user = create_user(
-        username="other_user", password="password223", mobile_number="+239994555"
+        username="other_user", password="password223", mobile_number="+239994555",district="AGUA_GRANDE"
     )
     return user.profile
 
@@ -159,7 +159,7 @@ class TestAdManageViewSet:
 
         # Ensure your custom User model has mobile_number field handled cleanly
         self.user = User.objects.create_user(
-            username="profuser2", password="pwd2", mobile_number="+2399955552"
+            username="profuser2", password="pwd2", mobile_number="+2399955552",district="AGUA_GRANDE"
         )
 
         # Base healthy draft asset

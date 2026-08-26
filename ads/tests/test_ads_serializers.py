@@ -22,7 +22,7 @@ class CustomerProfileSerializerTest(TestCase):
     def setUp(self):
         # Setup modern Django custom user profile fields mocked in serializer source
         self.user = User.objects.create_user(
-            username="profuser", password="pwd", mobile_number="+239995555"
+            username="profuser", password="pwd", mobile_number="+239995555",district="AGUA_GRANDE"
         )
         self.user.save()
 
@@ -80,7 +80,7 @@ class AdCreateSerializerValidationTest(TestCase):
         self.factory = APIRequestFactory()
         self.category = Category.objects.create(name="Livros", slug="livros")
         self.user = User.objects.create_user(
-            username="profuser2", password="pwd2", mobile_number="+2399955552"
+            username="profuser2", password="pwd2", mobile_number="+2399955552",district="AGUA_GRANDE"
         )
         self.user.save()
 
@@ -156,7 +156,7 @@ class AdCreateSerializerCreationTest(TestCase):
         self.factory = APIRequestFactory()
         self.category = Category.objects.create(name="Jogos", slug="jogos")
         self.user = User.objects.create_user(
-            username="gamer", password="pwd", mobile_number="+2399955552"
+            username="gamer", password="pwd", mobile_number="+2399955552",district="AGUA_GRANDE"
         )
         self.user.save()
 

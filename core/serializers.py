@@ -31,7 +31,7 @@ class UserCreateSerializer(UserCreateSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "mobile_number"]
+        fields = ["id", "mobile_number", "district"]
 
     def validate_mobile_number(self, value):
         """

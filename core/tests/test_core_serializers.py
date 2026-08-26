@@ -8,7 +8,7 @@ from core.serializers import UserCreateSerializer
 class TestCoreSerializers:
     def test_user_registration_success(self):
         # Given
-        user_data = {"mobile_number": "+2399882053"}
+        user_data = {"mobile_number": "+2399882053",  "district":"AGUA_GRANDE"}
         # Act
         serializer = UserCreateSerializer(data=user_data)
         # Then
@@ -18,6 +18,7 @@ class TestCoreSerializers:
         # Given
         user_data = {
             "mobile_number": "9882053",
+            "district":"AGUA_GRANDE"
         }
         # Act
         serializer = UserCreateSerializer(data=user_data)

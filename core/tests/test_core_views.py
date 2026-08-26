@@ -11,6 +11,7 @@ class TestCoreViews(APITestCase):
         self.valid_data = {
             "mobile_number": "+2399882053",
             "password": "securepassword123",
+             "district":"AGUA_GRANDE"
         }
 
     def test_core_api_create_account(self):
@@ -29,6 +30,7 @@ class TestCoreViews(APITestCase):
         user = User.objects.get()
         self.assertEqual(user.username, "+2399882053")
         self.assertEqual(user.mobile_number, "+2399882053")
+        self.assertEqual(user.district, "AGUA_GRANDE")
 
     def test_create_account_duplicate_mobile_number(self):
         """Ensure a user cannot register with an existing mobile number."""
@@ -37,6 +39,7 @@ class TestCoreViews(APITestCase):
             username=self.valid_data["mobile_number"],
             mobile_number=self.valid_data["mobile_number"],
             password=self.valid_data["password"],
+            district=self.valid_data["district"]
         )
 
         # Try to register again with same data
@@ -52,6 +55,7 @@ class TestCoreViews(APITestCase):
             username=self.valid_data["mobile_number"],
             mobile_number=self.valid_data["mobile_number"],
             password=self.valid_data["password"],
+            district=self.valid_data["district"]
         )
 
         # Login payload matching what your backend expects (usually username or mobile_number)
@@ -72,6 +76,8 @@ class TestCoreViews(APITestCase):
             username=self.valid_data["mobile_number"],
             mobile_number=self.valid_data["mobile_number"],
             password=self.valid_data["password"],
+            district=self.valid_data["district"]
+
         )
 
         invalid_login_data = {
