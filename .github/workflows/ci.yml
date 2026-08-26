@@ -77,3 +77,18 @@ jobs:
             -e DATABASE_URL="postgresql://runner:runner@127.0.0.1:5432/users" \
             $IMAGE:latest \
             sh -c "pip install ruff pytest pytest-django pytest-cov && pytest -p no:warnings --cov=. && ruff check . && ruff format --check ."
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Trigger Railway Redeploy
+        run: railway redeploy --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
