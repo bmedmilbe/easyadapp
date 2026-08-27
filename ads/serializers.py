@@ -25,7 +25,7 @@ class CustomerProfileSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "mobile_number",
-            "district",
+            "districtd",
             "whatsapp_link",
             "created_at",
             "updated_at",
