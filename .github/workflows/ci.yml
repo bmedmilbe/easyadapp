@@ -57,6 +57,15 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout code
@@ -70,10 +79,13 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Tests and Linters inside Docker Image
+        env:
+          REDIS_URL: redis://localhost:6379
         run: |
           docker pull $IMAGE:latest
           docker run --rm \
             --network host \
+            -e REDIS_URL="redis://127.0.0.1:6379" \
             -e DATABASE_URL="postgresql://runner:runner@127.0.0.1:5432/users" \
             $IMAGE:latest \
             sh -c "pip install ruff pytest pytest-django pytest-cov && python -m pytest -p no:warnings --cov=. && python -m ruff check . && python -m ruff format --check ."
