@@ -51,7 +51,7 @@ class AdImageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AdImage
-        fields = ["id", "image", "caption", "order", "created_at"]
+        fields = ["id", "image","api_image_webp", "caption", "order", "created_at"]
         read_only_fields = ["id", "created_at"]
 
 
@@ -149,8 +149,8 @@ class TemporaryAdImageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TemporaryAdImage
-        fields = ["id", "image", "caption", "order", "created_at"]
-        read_only_fields = ["id", "created_at"]
+        fields = ["id", "image","api_image_webp", "caption", "order", "created_at"]
+        read_only_fields = ["id", "created_at", "api_image_webp"]
 
     def create(self, validated_data):
         ad_id = self.context["temp_ad_id"]

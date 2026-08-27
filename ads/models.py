@@ -1,11 +1,15 @@
 # ads/models.py
+import os
 import uuid
 from datetime import timedelta
+from io import BytesIO
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
 from django.db import models
 from django.utils import timezone
+from PIL import Image
 
 
 class CustomerProfile(models.Model):
@@ -155,6 +159,7 @@ class AdImage(models.Model):
 
     ad = models.ForeignKey(Ad, on_delete=models.CASCADE, related_name="images")
     image = models.ImageField(upload_to="ads/ad_images/")
+    api_image_webp = models.ImageField(upload_to="ads/ad_images_webp/", blank=True, null=True)
     caption = models.CharField(max_length=200, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     order = models.PositiveIntegerField(default=0)
@@ -167,7 +172,7 @@ class AdImage(models.Model):
     def __str__(self):
         return f"Image for {self.ad.product_name}"
 
-
+    
 class TemporaryAd(models.Model):
     """
     Temporary draft holding station for non-authenticated users.
@@ -225,6 +230,7 @@ class TemporaryAd(models.Model):
             AdImage.objects.create(
                 ad=official_ad,
                 image=temp_image.image,
+                api_image_webp=temp_image.api_image_webp,
                 caption=temp_image.caption,
                 order=temp_image.order,
             )
@@ -244,6 +250,8 @@ class TemporaryAdImage(models.Model):
         TemporaryAd, on_delete=models.CASCADE, related_name="temporary_images"
     )
     image = models.ImageField(upload_to="ads/temp_ad_images/")
+    api_image_webp = models.ImageField(upload_to="ads/temp_ad_images_webp/", blank=True, null=True)
+
     caption = models.CharField(max_length=200, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     order = models.PositiveIntegerField(default=0)
@@ -255,3 +263,50 @@ class TemporaryAdImage(models.Model):
 
     def __str__(self):
         return f"Temp Image for {self.temporary_ad.product_name}"
+
+    def save(self, *args, **kwargs):
+        # Process only if an image exists and the optimized WebP hasn't been created yet
+        if self.image and not self.api_image_webp:
+
+            # 1. Environment-Agnostic File Open
+            self.image.open()
+            self.image.seek(0)
+
+            # Read into memory so Pillow doesn't lock the active file connection
+            image_bytes = BytesIO(self.image.read())
+            img = Image.open(image_bytes)
+
+            if img.mode in ("RGBA", "P"):
+                img = img.convert("RGB")
+    
+            # 2. Dimensions & Padding
+            target_size = (1200, 1200)
+            canvas = Image.new("RGB", target_size, (255, 255, 255))
+
+            # Downscale safely without altering small images
+            img.thumbnail(target_size, Image.Resampling.LANCZOS)
+
+            # Center on canvas
+            offset = ((target_size[0] - img.size[0]) // 2, (target_size[1] - img.size[1]) // 2)
+            canvas.paste(img, offset)
+    
+            # 3. Save optimized canvas to memory
+            buffer = BytesIO()
+            canvas.save(buffer, format="WEBP", quality=85, optimize=True)
+            buffer.seek(0)
+    
+            # 4. Clean Filename Extraction
+            raw_filename = os.path.basename(self.image.name)
+            name_without_ext, _ = os.path.splitext(raw_filename)
+
+            # 5. Assign to the field without triggering an early save network call
+            self.api_image_webp.save(
+                f"{name_without_ext}_api.webp", 
+                ContentFile(buffer.read()), 
+                save=False
+            )
+
+            # REMOVED self.image.close() completely to avoid I/O errors!
+    
+        # 6. Fallback to standard Django saving behavior
+        super().save(*args, **kwargs)
