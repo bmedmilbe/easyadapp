@@ -22,9 +22,9 @@ djangorestframework-simplejwt = "*"
 django-filter = "*"
 
 [dev-packages]
-pytest = "*"
 pytest-django = "*"
 pytest-cov = "*"
+pytest = "*"
 ruff = "*"
 
 [requires]
