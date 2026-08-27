@@ -20,6 +20,7 @@ django-storages = "*"
 boto3 = "*"
 djangorestframework-simplejwt = "*"
 django-filter = "*"
+django-redis = "*"
 
 [dev-packages]
 pytest-django = "*"

@@ -54,3 +54,6 @@ CSRF_COOKIE_HTTPONLY = False
 CSRF_TRUSTED_ORIGINS = os.environ.get(
     "CSRF_TRUSTED_ORIGINS", "http://localhost:8000 http://127.0.0.1:8000"
 ).split(" ")
+
+CACHES["default"]["LOCATION"] = os.environ.get("REDIS_URL", "redis://easyadr:6379/0")
+
