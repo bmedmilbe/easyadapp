@@ -131,9 +131,7 @@ class TemporaryAdModelTest(TestCase):
 
         # 2. Assign the valid raw image bytes into the SimpleUploadedFile
         self.mock_image = SimpleUploadedFile(
-            name="test_image.jpg", 
-            content=buffer.read(), 
-            content_type="image/jpeg"
+            name="test_image.jpg", content=buffer.read(), content_type="image/jpeg"
         )
 
     def test_transfer_to_official_ad_success(self):

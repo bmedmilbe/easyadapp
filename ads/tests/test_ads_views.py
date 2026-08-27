@@ -126,10 +126,9 @@ def create_image_using_bytes_io(name="test_image.jpg"):
 
     # 2. Assign the valid raw image bytes into the SimpleUploadedFile
     return SimpleUploadedFile(
-        name=name, 
-        content=buffer.read(), 
-        content_type="image/jpeg"
+        name=name, content=buffer.read(), content_type="image/jpeg"
     )
+
 
 # ==========================================
 # TEST CASES
@@ -324,8 +323,6 @@ class TestTemporaryAdImageViewSet:
         TemporaryAdImage.objects.create(
             temporary_ad=temporary_ad, image=create_image_using_bytes_io()
         )
-
-        
 
         url = reverse(
             "ads:temporary-ad-image-list", kwargs={"temporary_ad_pk": temporary_ad.pk}

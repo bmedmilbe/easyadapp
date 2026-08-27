@@ -19,6 +19,7 @@ from ads.serializers import (
 
 User = get_user_model()
 
+
 def create_image_using_bytes_io(name="test_image.jpg"):
     # 1. Create a genuine tiny image in memory using Pillow
     buffer = BytesIO()
@@ -29,10 +30,10 @@ def create_image_using_bytes_io(name="test_image.jpg"):
 
     # 2. Assign the valid raw image bytes into the SimpleUploadedFile
     return SimpleUploadedFile(
-        name=name, 
-        content=buffer.read(), 
-        content_type="image/jpeg"
+        name=name, content=buffer.read(), content_type="image/jpeg"
     )
+
+
 class CustomerProfileSerializerTest(TestCase):
     def setUp(self):
         # Setup modern Django custom user profile fields mocked in serializer source
@@ -71,10 +72,8 @@ class TemporaryAdImageSerializerTest(TestCase):
         category = Category.objects.create(name="Outros", slug="outros")
         temp_ad = TemporaryAd.objects.create(product_name="Draft", category=category)
 
-        
         mock_file = create_image_using_bytes_io()
 
-       
         data = {"image": mock_file, "caption": "Side profile", "order": 1}
 
         serializer = TemporaryAdImageSerializer(
@@ -103,7 +102,7 @@ class AdCreateSerializerValidationTest(TestCase):
             product_name="Dicionário", category=self.category, price=Decimal("150.00")
         )
         # Mock file reference to satisfy standard minimum imaging compliance validations
-        self.mock_file = create_image_using_bytes_io()        
+        self.mock_file = create_image_using_bytes_io()
         TemporaryAdImage.objects.create(temporary_ad=self.temp_ad, image=self.mock_file)
 
     def test_validation_passes_for_complete_draft(self):
@@ -183,7 +182,7 @@ class AdCreateSerializerCreationTest(TestCase):
             price=Decimal("9000.00"),
             description="Consola PS5 Description",
         )
-        
+
         self.mock_file = create_image_using_bytes_io()
         TemporaryAdImage.objects.create(temporary_ad=self.temp_ad, image=self.mock_file)
 

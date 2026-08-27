@@ -4,15 +4,16 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('ads', '0002_adimage_api_image_webp'),
+        ("ads", "0002_adimage_api_image_webp"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='temporaryadimage',
-            name='api_image_webp',
-            field=models.ImageField(blank=True, null=True, upload_to='ads/temp_ad_images_webp/'),
+            model_name="temporaryadimage",
+            name="api_image_webp",
+            field=models.ImageField(
+                blank=True, null=True, upload_to="ads/temp_ad_images_webp/"
+            ),
         ),
     ]
