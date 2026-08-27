@@ -1,9 +1,11 @@
 import uuid
 from decimal import Decimal
+from io import BytesIO
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+from PIL import Image
 from rest_framework.exceptions import ValidationError
 from rest_framework.test import APIRequestFactory
 
@@ -16,6 +18,20 @@ from ads.serializers import (
 )
 
 User = get_user_model()
+
+
+def create_image_using_bytes_io(name="test_image.jpg"):
+    # 1. Create a genuine tiny image in memory using Pillow
+    buffer = BytesIO()
+    # A tiny 10x10 white square image is enough for testing
+    img = Image.new("RGB", (10, 10), color="white")
+    img.save(buffer, format="JPEG")
+    buffer.seek(0)
+
+    # 2. Assign the valid raw image bytes into the SimpleUploadedFile
+    return SimpleUploadedFile(
+        name=name, content=buffer.read(), content_type="image/jpeg"
+    )
 
 
 class CustomerProfileSerializerTest(TestCase):
@@ -56,17 +72,8 @@ class TemporaryAdImageSerializerTest(TestCase):
         category = Category.objects.create(name="Outros", slug="outros")
         temp_ad = TemporaryAd.objects.create(product_name="Draft", category=category)
 
-        # A valid 1x1 transparent pixel GIF binary structure
-        valid_gif_pixel = (
-            b"\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00"
-            b"\xff\xff\xff\x21\xf9\x04\x01\x00\x00\x00\x00\x2c\x00\x00\x00\x00"
-            b"\x01\x00\x01\x00\x00\x02\x02\x4c\x01\x00\x3b"
-        )
+        mock_file = create_image_using_bytes_io()
 
-        # Use the valid image binary instead of raw text
-        mock_file = SimpleUploadedFile(
-            "pic.gif", valid_gif_pixel, content_type="image/gif"
-        )
         data = {"image": mock_file, "caption": "Side profile", "order": 1}
 
         serializer = TemporaryAdImageSerializer(
@@ -95,7 +102,7 @@ class AdCreateSerializerValidationTest(TestCase):
             product_name="Dicionário", category=self.category, price=Decimal("150.00")
         )
         # Mock file reference to satisfy standard minimum imaging compliance validations
-        self.mock_file = SimpleUploadedFile("b.jpg", b"img", content_type="image/jpeg")
+        self.mock_file = create_image_using_bytes_io()
         TemporaryAdImage.objects.create(temporary_ad=self.temp_ad, image=self.mock_file)
 
     def test_validation_passes_for_complete_draft(self):
@@ -175,9 +182,8 @@ class AdCreateSerializerCreationTest(TestCase):
             price=Decimal("9000.00"),
             description="Consola PS5 Description",
         )
-        self.mock_file = SimpleUploadedFile(
-            "ps5.jpg", b"data", content_type="image/jpeg"
-        )
+
+        self.mock_file = create_image_using_bytes_io()
         TemporaryAdImage.objects.create(temporary_ad=self.temp_ad, image=self.mock_file)
 
     def test_create_fails_if_unauthenticated(self):

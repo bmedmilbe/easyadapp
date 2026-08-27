@@ -1,9 +1,11 @@
 from decimal import Decimal
+from io import BytesIO
 
 import pytest
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from PIL import Image
 from rest_framework import status
 from rest_framework.test import APIClient, APIRequestFactory
 
@@ -15,7 +17,6 @@ from ads.models import (
     TemporaryAdImage,
 )
 
-User = get_user_model()
 User = get_user_model()
 
 # ==========================================
@@ -115,6 +116,20 @@ def temporary_ad():
     )
 
 
+def create_image_using_bytes_io(name="test_image.jpg"):
+    # 1. Create a genuine tiny image in memory using Pillow
+    buffer = BytesIO()
+    # A tiny 10x10 white square image is enough for testing
+    img = Image.new("RGB", (10, 10), color="white")
+    img.save(buffer, format="JPEG")
+    buffer.seek(0)
+
+    # 2. Assign the valid raw image bytes into the SimpleUploadedFile
+    return SimpleUploadedFile(
+        name=name, content=buffer.read(), content_type="image/jpeg"
+    )
+
+
 # ==========================================
 # TEST CASES
 # ==========================================
@@ -186,7 +201,7 @@ class TestAdManageViewSet:
         )
 
         # Mock file reference to satisfy standard minimum imaging compliance validations
-        self.mock_file = SimpleUploadedFile("b.jpg", b"img", content_type="image/jpeg")
+        self.mock_file = create_image_using_bytes_io()
         TemporaryAdImage.objects.create(temporary_ad=self.temp_ad, image=self.mock_file)
 
     def test_anonymous_user_cannot_mutate(self, api_client):
@@ -306,7 +321,7 @@ class TestTemporaryAdImageViewSet:
 
     def test_list_nested_temporary_images(self, api_client, temporary_ad):
         TemporaryAdImage.objects.create(
-            temporary_ad=temporary_ad, image="guest/img.png"
+            temporary_ad=temporary_ad, image=create_image_using_bytes_io()
         )
 
         url = reverse(
