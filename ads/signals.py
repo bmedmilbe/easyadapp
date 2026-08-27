@@ -45,16 +45,18 @@ def invalidate_ads_cache(sender, instance, **kwargs):
     safe_increment_version("ads_cache_version")
     safe_increment_version(f"ads_{instance.id}_cache_version")
     safe_increment_version(f"ads_manage_{instance.id}_cache_version")
-    
+
     # Safely check if a customer relationship exists before accessing its ID
-    if getattr(instance, 'customer', None):
-        safe_increment_version(f"ads_manage_customer_{instance.customer.id}_cache_version")
+    if getattr(instance, "customer", None):
+        safe_increment_version(
+            f"ads_manage_customer_{instance.customer.id}_cache_version"
+        )
 
 
 @receiver([post_save, post_delete], sender=AdImage)
 def invalidate_ads_images_cache(sender, instance, **kwargs):
     """Increments gallery and individual asset cache versions."""
-    if getattr(instance, 'ad', None):
+    if getattr(instance, "ad", None):
         safe_increment_version(f"ads_images_{instance.ad.id}_cache_version")
     safe_increment_version(f"ads_image_{instance.id}_cache_version")
 
@@ -68,6 +70,8 @@ def invalidate_temp_ads_cache(sender, instance, **kwargs):
 @receiver([post_save, post_delete], sender=TemporaryAdImage)
 def invalidate_temp_ads_images_cache(sender, instance, **kwargs):
     """Increments temporary gallery and individual asset cache versions."""
-    if getattr(instance, 'temporary_ad', None):
-        safe_increment_version(f"temp_ads_images_{instance.temporary_ad.id}_cache_version")
+    if getattr(instance, "temporary_ad", None):
+        safe_increment_version(
+            f"temp_ads_images_{instance.temporary_ad.id}_cache_version"
+        )
     safe_increment_version(f"temp_ads_image_{instance.id}_cache_version")

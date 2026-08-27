@@ -1,6 +1,4 @@
-
 import hashlib
-import time
 from functools import wraps
 
 from django.core.cache import cache
@@ -30,15 +28,16 @@ from .serializers import (
 )
 
 
-def custom_cache_version(cache_name_pattern, timeout=60*1):
+def custom_cache_version(cache_name_pattern, timeout=60 * 60):
     """
     A reusable decorator for DRF ViewSet methods (list, retrieve).
     Supports dynamic string formatting using view kwargs (e.g., 'ads_{pk}').
     """
+
     def decorator(func):
         @wraps(func)
         def wrapper(self, request, *args, **kwargs):
-            
+
             # 1. Resolve dynamic cache names like "ads_{pk}" using url kwargs
             # If kwargs contains {'pk': 5}, "ads_{pk}" becomes "ads_5"
             try:
@@ -48,7 +47,7 @@ def custom_cache_version(cache_name_pattern, timeout=60*1):
 
             # 2. Fetch the specific version tracker from Redis
             cache_version = cache.get_or_set(f"{cache_name}_cache_version", 1)
-            
+
             # 3. Handle query parameters (useful if retrieve has variations like ?expand=true)
             query_params = request.query_params.dict()
             if query_params:
@@ -58,23 +57,22 @@ def custom_cache_version(cache_name_pattern, timeout=60*1):
                 cache_key = f"api_{cache_name}_{params_hash}"
             else:
                 cache_key = f"api_{cache_name}_clean"
-                
+
             # 4. Check Redis cache hit
             cached_data = cache.get(cache_key, version=cache_version)
             if cached_data:
                 return Response(cached_data)
-            time.sleep(10)
             # 5. Cache Miss: Execute original method
             response = func(self, request, *args, **kwargs)
-            
+
             # 6. Store response data
             cache.set(cache_key, response.data, timeout=timeout, version=cache_version)
-            
+
             return response
+
         return wrapper
+
     return decorator
-
-
 
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
@@ -87,10 +85,10 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
-    lookup_field = 'slug'
+    lookup_field = "slug"
 
-    @custom_cache_version("categories", 60*1)
-    def list(self, request, *args, **kwargs):        
+    @custom_cache_version("categories", 60 * 60 * 24)
+    def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
 
@@ -115,13 +113,13 @@ class AdViewViewSet(viewsets.ReadOnlyModelViewSet):
     }
     serializer_class = AdSerializer
 
-    @custom_cache_version("ads", 60*1)
-    def list(self, request, *args, **kwargs):        
+    @custom_cache_version("ads", 60 * 60)
+    def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
-    @custom_cache_version("ads_{pk}", timeout=60*30)
+    @custom_cache_version("ads_{pk}", timeout=60 * 60)
     def retrieve(self, request, *args, **kwargs):
-        return super().retrieve(request, *args, **kwargs)   
+        return super().retrieve(request, *args, **kwargs)
 
 
 class AdManageViewSet(viewsets.ModelViewSet):
@@ -187,33 +185,35 @@ class AdManageViewSet(viewsets.ModelViewSet):
         context["temp_ad_id"] = self.kwargs.get("temporary_ad_pk")
         return context
 
-    
-    def list(self, request, *args, **kwargs):  
+    def list(self, request, *args, **kwargs):
         if self.request.user.is_authenticated:
             customer = CustomerProfile.objects.get(user=self.request.user)
             customer_id = customer.id
-            
+
             # Dynamically instantiate the decorator inside the function execution block
-            @custom_cache_version(f"ads_manage_customer_{customer_id}", timeout=60*15)
+            @custom_cache_version(f"ads_manage_customer_{customer_id}", timeout=60 * 60)
             def get_cached_list(inner_self, inner_request, *inner_args, **inner_kwargs):
                 return super(AdManageViewSet, self).list(request, *args, **kwargs)
-            
+
             # Execute the safely wrapped method passing down instances
             return get_cached_list(self, request, *args, **kwargs)
-            
+
         # Fallback response if the user somehow reaches here unauthenticated
-        return Response({"detail": "Authentication credentials were not provided."}, status=401)
-            
+        return Response(
+            {"detail": "Authentication credentials were not provided."}, status=401
+        )
+
     def retrieve(self, request, *args, **kwargs):
         # Fetch the target instance to capture its unique ID
         obj = self.get_object()
-        
+
         # Dynamically instantiate the decorator matching your unique instance ID pattern
-        @custom_cache_version(f"ads_manage_{obj.id}", timeout=60*30)
+        @custom_cache_version(f"ads_manage_{obj.id}", timeout=60 * 60)
         def get_cached_retrieve(inner_self, inner_request, *inner_args, **inner_kwargs):
             return super(AdManageViewSet, self).retrieve(request, *args, **kwargs)
-            
+
         return get_cached_retrieve(self, request, *args, **kwargs)
+
 
 class AdImageViewSet(viewsets.ModelViewSet):
     """
@@ -230,28 +230,31 @@ class AdImageViewSet(viewsets.ModelViewSet):
         ad_id = self.kwargs.get("ad_pk")
         return AdImage.objects.filter(ad_id=ad_id)
 
-    def list(self, request, *args, **kwargs):  
+    def list(self, request, *args, **kwargs):
         # Extract the ad ID directly from the URL kwargs (e.g., from nested routing)
         ad_id = self.kwargs.get("ad_pk")
-        
+
         # Instantiate the decorator inline to capture the dynamic ad_id
-        @custom_cache_version(f"ads_images_{ad_id}", timeout=60*15)
-        def get_cached_images_list(inner_self, inner_request, *inner_args, **inner_kwargs):
+        @custom_cache_version(f"ads_images_{ad_id}", timeout=60 * 60)
+        def get_cached_images_list(
+            inner_self, inner_request, *inner_args, **inner_kwargs
+        ):
             return super(AdImageViewSet, self).list(request, *args, **kwargs)
-            
+
         return get_cached_images_list(self, request, *args, **kwargs)
-                
+
     def retrieve(self, request, *args, **kwargs):
         # Fetch the specific AdImage instance to capture its unique ID
         obj = self.get_object()
-        
+
         # Instantiate the decorator inline matching your image-specific cache key
-        @custom_cache_version(f"ads_image_{obj.id}", timeout=60*30)
-        def get_cached_image_detail(inner_self, inner_request, *inner_args, **inner_kwargs):
+        @custom_cache_version(f"ads_image_{obj.id}", timeout=60 * 60)
+        def get_cached_image_detail(
+            inner_self, inner_request, *inner_args, **inner_kwargs
+        ):
             return super(AdImageViewSet, self).retrieve(request, *args, **kwargs)
-            
+
         return get_cached_image_detail(self, request, *args, **kwargs)
-    
 
 
 class TemporaryAdViewSet(
@@ -269,13 +272,18 @@ class TemporaryAdViewSet(
     def retrieve(self, request, *args, **kwargs):
         # Fetch the specific TemporaryAd instance to capture its unique ID
         obj = self.get_object()
-        
+
         # Instantiate the decorator inline matching your temporary ad-specific cache key
-        @custom_cache_version(f"temp_ad_{obj.id}", timeout=60*10) # 10-minute timeout for temporary objects
-        def get_cached_temp_ad_detail(inner_self, inner_request, *inner_args, **inner_kwargs):
+        @custom_cache_version(
+            f"temp_ad_{obj.id}", timeout=60 * 600
+        )  # 10-minute timeout for temporary objects
+        def get_cached_temp_ad_detail(
+            inner_self, inner_request, *inner_args, **inner_kwargs
+        ):
             return super(TemporaryAdViewSet, self).retrieve(request, *args, **kwargs)
-            
+
         return get_cached_temp_ad_detail(self, request, *args, **kwargs)
+
 
 class TemporaryAdImageViewSet(viewsets.ModelViewSet):
     """
@@ -297,24 +305,30 @@ class TemporaryAdImageViewSet(viewsets.ModelViewSet):
         context["temp_ad_id"] = self.kwargs.get("temporary_ad_pk")
         return context
 
-    def list(self, request, *args, **kwargs):  
+    def list(self, request, *args, **kwargs):
         # Extract the temporary ad ID from your nested URL path configuration
         ad_id = self.kwargs.get("temporary_ad_pk")
-        
+
         # Instantiate the decorator inline to capture the dynamic parent temporary ad ID
-        @custom_cache_version(f"temp_ads_images_{ad_id}", timeout=60*10)
-        def get_cached_temp_images_list(inner_self, inner_request, *inner_args, **inner_kwargs):
+        @custom_cache_version(f"temp_ads_images_{ad_id}", timeout=60 * 600)
+        def get_cached_temp_images_list(
+            inner_self, inner_request, *inner_args, **inner_kwargs
+        ):
             return super(TemporaryAdImageViewSet, self).list(request, *args, **kwargs)
-            
+
         return get_cached_temp_images_list(self, request, *args, **kwargs)
-                    
+
     def retrieve(self, request, *args, **kwargs):
         # Fetch the specific TemporaryAdImage instance to extract its unique ID
         obj = self.get_object()
-        
+
         # Instantiate the decorator inline matching your image-specific cache key
-        @custom_cache_version(f"temp_ads_image_{obj.id}", timeout=60*15)
-        def get_cached_temp_image_detail(inner_self, inner_request, *inner_args, **inner_kwargs):
-            return super(TemporaryAdImageViewSet, self).retrieve(request, *args, **kwargs)
-            
+        @custom_cache_version(f"temp_ads_image_{obj.id}", timeout=60 * 60)
+        def get_cached_temp_image_detail(
+            inner_self, inner_request, *inner_args, **inner_kwargs
+        ):
+            return super(TemporaryAdImageViewSet, self).retrieve(
+                request, *args, **kwargs
+            )
+
         return get_cached_temp_image_detail(self, request, *args, **kwargs)
