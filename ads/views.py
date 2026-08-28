@@ -2,8 +2,9 @@ import hashlib
 from functools import wraps
 
 from django.core.cache import cache
+from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, mixins, permissions, viewsets
+from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.permissions import (
     AllowAny,
     IsAuthenticatedOrReadOnly,
@@ -26,6 +27,7 @@ from .serializers import (
     TemporaryAdImageSerializer,
     TemporaryAdSerializer,
 )
+from .tasks import process_temp_picture_task
 
 
 def custom_cache_version(cache_name_pattern, timeout=60 * 60):
@@ -275,7 +277,7 @@ class TemporaryAdViewSet(
 
         # Instantiate the decorator inline matching your temporary ad-specific cache key
         @custom_cache_version(
-            f"temp_ad_{obj.id}", timeout=60 * 600
+            f"temp_ad_{obj.id}", timeout=60 * 60
         )  # 10-minute timeout for temporary objects
         def get_cached_temp_ad_detail(
             inner_self, inner_request, *inner_args, **inner_kwargs
@@ -292,6 +294,15 @@ class TemporaryAdImageViewSet(viewsets.ModelViewSet):
 
     serializer_class = TemporaryAdImageSerializer
     permission_classes = [AllowAny]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save()
+
+        transaction.on_commit(lambda: process_temp_picture_task.delay(instance.id))
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def get_queryset(self):
         """
@@ -310,7 +321,7 @@ class TemporaryAdImageViewSet(viewsets.ModelViewSet):
         ad_id = self.kwargs.get("temporary_ad_pk")
 
         # Instantiate the decorator inline to capture the dynamic parent temporary ad ID
-        @custom_cache_version(f"temp_ads_images_{ad_id}", timeout=60 * 600)
+        @custom_cache_version(f"temp_ads_images_{ad_id}", timeout=60 * 60)
         def get_cached_temp_images_list(
             inner_self, inner_request, *inner_args, **inner_kwargs
         ):
