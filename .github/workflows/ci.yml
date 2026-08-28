@@ -87,5 +87,6 @@ jobs:
             --network host \
             -e REDIS_URL="redis://127.0.0.1:6379" \
             -e DATABASE_URL="postgresql://runner:runner@127.0.0.1:5432/users" \
+            -e CELERY_TASK_ALWAYS_EAGER=True \
             $IMAGE:latest \
             sh -c "pip install ruff pytest pytest-django pytest-cov && python -m pytest -p no:warnings --cov=. && python -m ruff check . && python -m ruff format --check ."

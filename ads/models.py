@@ -1,15 +1,10 @@
-# ads/models.py
-import os
 import uuid
 from datetime import timedelta
-from io import BytesIO
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.files.base import ContentFile
 from django.db import models
 from django.utils import timezone
-from PIL import Image
 
 
 class CustomerProfile(models.Model):
@@ -48,7 +43,6 @@ class CustomerProfile(models.Model):
         return f"https://wa.me/{clean_number}"
 
 
-# ads/models.py - Update Category model
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=100, unique=True)
@@ -268,49 +262,3 @@ class TemporaryAdImage(models.Model):
     def __str__(self):
         return f"Temp Image for {self.temporary_ad.product_name}"
 
-    def save(self, *args, **kwargs):
-        # Process only if an image exists and the optimized WebP hasn't been created yet
-        if self.image and not self.api_image_webp:
-            # 1. Environment-Agnostic File Open
-            self.image.open()
-            self.image.seek(0)
-
-            # Read into memory so Pillow doesn't lock the active file connection
-            image_bytes = BytesIO(self.image.read())
-            img = Image.open(image_bytes)
-
-            if img.mode in ("RGBA", "P"):
-                img = img.convert("RGB")
-
-            # 2. Dimensions & Padding
-            target_size = (1200, 1200)
-            canvas = Image.new("RGB", target_size, (255, 255, 255))
-
-            # Downscale safely without altering small images
-            img.thumbnail(target_size, Image.Resampling.LANCZOS)
-
-            # Center on canvas
-            offset = (
-                (target_size[0] - img.size[0]) // 2,
-                (target_size[1] - img.size[1]) // 2,
-            )
-            canvas.paste(img, offset)
-
-            # 3. Save optimized canvas to memory
-            buffer = BytesIO()
-            canvas.save(buffer, format="WEBP", quality=85, optimize=True)
-            buffer.seek(0)
-
-            # 4. Clean Filename Extraction
-            raw_filename = os.path.basename(self.image.name)
-            name_without_ext, _ = os.path.splitext(raw_filename)
-
-            # 5. Assign to the field without triggering an early save network call
-            self.api_image_webp.save(
-                f"{name_without_ext}_api.webp", ContentFile(buffer.read()), save=False
-            )
-
-            # REMOVED self.image.close() completely to avoid I/O errors!
-
-        # 6. Fallback to standard Django saving behavior
-        super().save(*args, **kwargs)
