@@ -295,16 +295,15 @@ class TemporaryAdImageViewSet(viewsets.ModelViewSet):
     serializer_class = TemporaryAdImageSerializer
     permission_classes = [AllowAny]
 
-
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         instance = serializer.save()
-        
+
         transaction.on_commit(lambda: process_temp_picture_task.delay(instance.id))
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    
+
     def get_queryset(self):
         """
         Filter temporary images by the parent temporary ad.
@@ -344,7 +343,3 @@ class TemporaryAdImageViewSet(viewsets.ModelViewSet):
             )
 
         return get_cached_temp_image_detail(self, request, *args, **kwargs)
-
-    
-        
-

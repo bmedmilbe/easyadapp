@@ -57,4 +57,3 @@ CSRF_TRUSTED_ORIGINS = os.environ.get(
 
 CACHES["default"]["LOCATION"] = os.environ.get("REDIS_URL", "redis://localhost:6379")
 CELERY_BROKER_URL = os.environ.get("REDIS_URL", "redis://localhost:6379")
-

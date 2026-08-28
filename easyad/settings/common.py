@@ -167,4 +167,4 @@ CACHES = {
         },
     }
 }
-CELERY_BROKER_URL = 'redis://easyadr:6379/1'
+CELERY_BROKER_URL = "redis://easyadr:6379/1"

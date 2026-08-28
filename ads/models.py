@@ -261,4 +261,3 @@ class TemporaryAdImage(models.Model):
 
     def __str__(self):
         return f"Temp Image for {self.temporary_ad.product_name}"
-
