@@ -22,12 +22,17 @@ djangorestframework-simplejwt = "*"
 django-filter = "*"
 django-redis = "*"
 celery = {extras = ["redis"], version = "*"}
+py-spy = "*"
 
 [dev-packages]
 pytest-django = "*"
 pytest-cov = "*"
 ruff = "*"
+dj-inmemorystorage = "*"
+pytest-xdist = "*"
 pytest = "*"
+factory-boy = "*"
+faker = "*"
 
 [requires]
 python_version = "3.10"
