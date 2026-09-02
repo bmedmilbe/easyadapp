@@ -7,7 +7,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from PIL import Image
 from rest_framework import status
-from rest_framework.test import APIClient, APIRequestFactory
+from rest_framework.test import APIClient, APIRequestFactory, force_authenticate
 
 from ads.models import (
     Ad,
@@ -16,6 +16,14 @@ from ads.models import (
     TemporaryAd,
     TemporaryAdImage,
 )
+from ads.tests.factories import (
+    AdFactory,
+    AdTempFactory,
+    CategoryFactoryChild,
+    TemporaryAdImageFactory,
+    UserFactory,
+)
+from ads.views import AdManageViewSet
 
 User = get_user_model()
 
@@ -74,10 +82,10 @@ def other_customer_profile(create_user):
     return user.profile
 
 
-@pytest.fixture
-def category():
-    """Generates a test Category."""
-    return Category.objects.create(name="Electronics", slug="electronics")
+# @pytest.fixture
+# def category():
+#     """Generates a test Category."""
+#     return Category.objects.create(name="Electronics", slug="electronics")
 
 
 @pytest.fixture
@@ -139,14 +147,16 @@ def create_image_using_bytes_io(name="test_image.jpg"):
 class TestCategoryViewSet:
     """Tests the read-only, publicly accessible CategoryViewSet endpoints."""
 
-    def test_list_categories_publicly(self, api_client, category):
+    def test_list_categories_publicly(self, api_client):
+        category = CategoryFactoryChild()
         url = reverse("ads:category-list")
         response = api_client.get(url)
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data["results"]) == 1
         assert response.data["results"][0]["slug"] == category.slug
 
-    def test_retrieve_category_by_slug(self, api_client, category):
+    def test_retrieve_category_by_slug(self, api_client):
+        category = CategoryFactoryChild()
         url = reverse("ads:category-detail", kwargs={"slug": category.slug})
         response = api_client.get(url)
         assert response.status_code == status.HTTP_200_OK
@@ -157,18 +167,21 @@ class TestCategoryViewSet:
 class TestAdViewViewSet:
     """Tests the read-only, publicly accessible AdViewViewSet listing."""
 
-    def test_list_ads_publicly(self, api_client, official_ad, other_ad):
+    def test_list_ads_publicly(self, api_client):
+        AdFactory(product_name="a")
+        AdFactory(product_name="b")
         url = reverse("ads:ad-view-list")
         response = api_client.get(url)
         assert response.status_code == status.HTTP_200_OK
         # Public listings must yield all instances across users
         assert len(response.data["results"]) == 2
 
-    def test_retrieve_single_ad_publicly(self, api_client, official_ad):
-        url = reverse("ads:ad-view-detail", kwargs={"pk": official_ad.pk})
+    def test_retrieve_single_ad_publicly(self, api_client):
+        ad = AdFactory(product_name="b")
+        url = reverse("ads:ad-view-detail", kwargs={"pk": ad.pk})
         response = api_client.get(url)
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["product_name"] == official_ad.product_name
+        assert response.data["product_name"] == ad.product_name
 
 
 @pytest.mark.django_db
@@ -204,19 +217,30 @@ class TestAdManageViewSet:
         self.mock_file = create_image_using_bytes_io()
         TemporaryAdImage.objects.create(temporary_ad=self.temp_ad, image=self.mock_file)
 
-    def test_anonymous_user_cannot_mutate(self, api_client):
+    def test_anonymous_user_cannot_mutate(self):
+        factory = APIRequestFactory()
         url = reverse("ads:ad-manage-list")
-        response = api_client.post(url, data={})
-        # Correctly updated to match your prior 401/403 verification
+        request = factory.post(url, data={})
+        view = AdManageViewSet.as_view({'post': 'create'})
+        response = view(request)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_authenticated_user_can_create_ad(self, api_client, customer_profile):
-        api_client.force_authenticate(user=customer_profile.user)
-        url = reverse("ads:ad-manage-list")
+    def test_authenticated_user_can_create_ad(self):
 
-        # Using self.temp_ad built dynamically in our auto-running setup fixture
-        payload = {"temp_ad_id": str(self.temp_ad.id)}
-        response = api_client.post(url, data=payload)
+        factory = APIRequestFactory()
+        user = UserFactory()
+        temp_ad = AdTempFactory()
+        TemporaryAdImageFactory(temporary_ad=temp_ad)
+        url = reverse("ads:ad-manage-list")
+        payload = {"temp_ad_id": str(temp_ad.id)}
+
+
+        request = factory.post(url, data=payload)
+        force_authenticate(request, user=user)
+        view = AdManageViewSet.as_view({'post': 'create'})
+        response = view(request)
+
+
         assert response.status_code == status.HTTP_201_CREATED
 
     def test_queryset_isolation_prevents_viewing_others_ads(

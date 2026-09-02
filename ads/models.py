@@ -137,15 +137,7 @@ class Ad(models.Model):
         """
         return timezone.now() >= self.expires_at
 
-    def save(self, *args, **kwargs):
-        """
-        Override save to automatically set status to EXPIRED if expired.
-        """
-        if self.is_expired():
-            self.status = AdStatus.EXPIRED
-        super().save(*args, **kwargs)
-
-
+    
 class AdImage(models.Model):
     """
     Model for storing multiple images per ad.
