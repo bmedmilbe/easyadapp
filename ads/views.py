@@ -3,6 +3,7 @@ from functools import wraps
 
 from django.core.cache import cache
 from django.db import transaction
+from django.http import Http404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.permissions import (
@@ -125,14 +126,7 @@ class AdViewViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class AdManageViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet for authenticated users to manage (list,add, edit, delete) their own ads.
-    """
-
-    queryset = Ad.objects.all()
     permission_classes = [permissions.IsAuthenticated]
-
-    # Restrict to only add, edit, and delete actions
     http_method_names = ["post", "get", "put", "patch", "delete"]
 
     filter_backends = [
@@ -158,8 +152,11 @@ class AdManageViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """
         Ensures users can only view or mutate their own products.
+        Returns an empty queryset if the profile does not exist.
         """
         user = self.request.user
+
+        # Safe fallback for unauthenticated users (avoids breaking internal DRF engines)
         if not user or user.is_anonymous:
             return Ad.objects.none()
 
@@ -189,27 +186,43 @@ class AdManageViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         if self.request.user.is_authenticated:
-            customer = CustomerProfile.objects.get(user=self.request.user)
-            customer_id = customer.id
+            try:
+                customer = CustomerProfile.objects.get(user=self.request.user)
+                customer_id = customer.id
 
-            # Dynamically instantiate the decorator inside the function execution block
-            @custom_cache_version(f"ads_manage_customer_{customer_id}", timeout=60 * 60)
-            def get_cached_list(inner_self, inner_request, *inner_args, **inner_kwargs):
-                return super(AdManageViewSet, self).list(request, *args, **kwargs)
+                @custom_cache_version(
+                    f"ads_manage_customer_{customer_id}", timeout=60 * 60
+                )
+                def get_cached_list(
+                    inner_self, inner_request, *inner_args, **inner_kwargs
+                ):
+                    return super(AdManageViewSet, self).list(request, *args, **kwargs)
 
-            # Execute the safely wrapped method passing down instances
-            return get_cached_list(self, request, *args, **kwargs)
+                return get_cached_list(self, request, *args, **kwargs)
+            except CustomerProfile.DoesNotExist:
+                return Response(
+                    {"detail": "Customer profile missing."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
-        # Fallback response if the user somehow reaches here unauthenticated
         return Response(
-            {"detail": "Authentication credentials were not provided."}, status=401
+            {"detail": "Authentication credentials were not provided."},
+            status=status.HTTP_401_UNAUTHORIZED,
         )
 
     def retrieve(self, request, *args, **kwargs):
-        # Fetch the target instance to capture its unique ID
-        obj = self.get_object()
+        print(f"User: {request.user}")
+        print(f"Ad PK: {kwargs.get('pk')}")
 
-        # Dynamically instantiate the decorator matching your unique instance ID pattern
+        try:
+            obj = self.get_object()
+            print(f"Found object: {obj.id}, customer: {obj.customer.user.id}")
+        except Http404:
+            print("Http404 raised")
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        print(f"Cache key will be: ads_manage_{obj.id}")
+
         @custom_cache_version(f"ads_manage_{obj.id}", timeout=60 * 60)
         def get_cached_retrieve(inner_self, inner_request, *inner_args, **inner_kwargs):
             return super(AdManageViewSet, self).retrieve(request, *args, **kwargs)

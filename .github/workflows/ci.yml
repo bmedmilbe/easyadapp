@@ -66,6 +66,7 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+          --mount type=tmpfs,destination=/var/lib/postgresql/data
 
     steps:
       - name: Checkout code
@@ -89,4 +90,4 @@ jobs:
             -e DATABASE_URL="postgresql://runner:runner@127.0.0.1:5432/users" \
             -e CELERY_TASK_ALWAYS_EAGER=True \
             $IMAGE:latest \
-            sh -c "pip install ruff pytest pytest-django pytest-cov && python -m pytest -p no:warnings --cov=. && python -m ruff check . && python -m ruff format --check ."
+            sh -c "pip install ruff pytest pytest-django pytest-cov dj-inmemorystorage pytest-xdist factory-boy faker && python -m pytest -p no:warnings --cov=. && python -m ruff check . && python -m ruff format --check ."
