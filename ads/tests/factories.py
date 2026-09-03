@@ -11,6 +11,7 @@ from PIL import Image
 
 from ads.models import (
     Ad,
+    AdImage,
     Category,
     CustomerProfile,
     TemporaryAd,
@@ -110,6 +111,16 @@ class TemporaryAdImageFactory(DjangoModelFactory):
         model = TemporaryAdImage
 
     temporary_ad = factory.SubFactory(AdTempFactory)
+    caption = factory.Faker("text")
+    created_at = factory.Faker("date_time_this_year")
+    order = factory.Sequence(lambda n: n + 1)
+    image = genarate_image()
+
+class AdImageFactory(DjangoModelFactory):
+    class Meta:
+        model = AdImage
+
+    ad = factory.SubFactory(AdFactory)
     caption = factory.Faker("text")
     created_at = factory.Faker("date_time_this_year")
     order = factory.Sequence(lambda n: n + 1)
