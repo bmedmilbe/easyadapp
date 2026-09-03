@@ -2,40 +2,34 @@ import pytest
 from django.core.exceptions import ValidationError
 
 from core.models import User
-
-
-@pytest.fixture
-def user_valid_data():
-    return {
-        "mobile_number": "+2399882053",
-        "username": "+2399882053",
-        "password": "password123",
-        "district": "AGUA_GRANDE",
-    }
+from core.tests.factories import UserFactory
 
 
 @pytest.mark.django_db
 class TestCoreModels:
-    def test_create_new_user(self, user_valid_data):
-
+    def test_create_new_user(self):
         # Given
-        data = user_valid_data
+        user = UserFactory.build()
 
         # Act
-        saved_user = User.objects.create(**data)
-        users_count = len(User.objects.all())
+        user.save()
+        users_count = User.objects.count()
 
         # Then
         assert users_count == 1
-        assert saved_user.mobile_number == data["mobile_number"]
-        assert saved_user.district == data["district"]
+        assert user.mobile_number is not None
+        assert user.district == "AGUA_GRANDE"
 
-    def test_create_new_user_wrong_number(self, user_valid_data):
+    def test_create_new_user_wrong_number(self):
         # Given
-        data = user_valid_data
-        data["mobile_number"] = "9882053"
+        data = {
+            "mobile_number": "9882053",
+            "username": "9882053",
+            "password": "password123",
+            "district": "AGUA_GRANDE",
+        }
 
-        # Act
+        # Act & Then
         with pytest.raises(ValidationError):
             User.objects.create(**data)
 
@@ -43,6 +37,6 @@ class TestCoreModels:
         # Given
         data = {}
 
-        # Act
+        # Act & Then
         with pytest.raises(ValidationError):
             User.objects.create(**data)
