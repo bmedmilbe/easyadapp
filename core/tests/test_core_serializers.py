@@ -12,10 +12,10 @@ class TestCoreSerializers:
             "district": "AGUA_GRANDE",
             "password": "password123",
         }
-        
+
         # Act
         serializer = UserCreateSerializer(data=user_data)
-        
+
         # Then
         assert serializer.is_valid()
 
@@ -26,19 +26,19 @@ class TestCoreSerializers:
             "district": "AGUA_GRANDE",
             "password": "password123",
         }
-        
+
         # Act
         serializer = UserCreateSerializer(data=user_data)
-        
+
         # Then
         assert not serializer.is_valid()
 
     def test_user_registration_non_data(self):
         # Given
         user_data = {}
-        
+
         # Act
         serializer = UserCreateSerializer(data=user_data)
-        
+
         # Then
         assert not serializer.is_valid()

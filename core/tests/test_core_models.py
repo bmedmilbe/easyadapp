@@ -10,7 +10,7 @@ class TestCoreModels:
     def test_create_new_user(self):
         # Given
         user = UserFactory.build()
-        
+
         # Act
         user.save()
         users_count = User.objects.count()

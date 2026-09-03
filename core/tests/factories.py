@@ -1,4 +1,3 @@
-
 import factory
 from factory.django import DjangoModelFactory
 
@@ -15,4 +14,3 @@ class UserFactory(DjangoModelFactory):
 
     username = factory.Sequence(lambda n: f"user_{n}")
     password = "password123"
-

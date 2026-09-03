@@ -19,10 +19,11 @@ class TestCoreViews:
             "district": "AGUA_GRANDE",
             "username": "+2399882053",
         }
-        
+
         # Act
         request = factory.post(url, data=data, format="json")
         from djoser.views import UserViewSet
+
         view = UserViewSet.as_view({"post": "create"})
         response = view(request)
 
@@ -40,9 +41,9 @@ class TestCoreViews:
         # Given
         factory = APIRequestFactory()
         url = reverse("user-list")
-        
+
         UserFactory(mobile_number="+2399882053", username="+2399882053")
-        
+
         data = {
             "mobile_number": "+2399882053",
             "password": "securepassword123",
@@ -53,6 +54,7 @@ class TestCoreViews:
         # Act
         request = factory.post(url, data=data, format="json")
         from djoser.views import UserViewSet
+
         view = UserViewSet.as_view({"post": "create"})
         response = view(request)
 
@@ -64,7 +66,7 @@ class TestCoreViews:
         # Given
         factory = APIRequestFactory()
         url = reverse("jwt-create")
-        
+
         # Create user using factory
         user = UserFactory(
             mobile_number="+2399882053",
@@ -72,7 +74,7 @@ class TestCoreViews:
         )
         user.set_password("securepassword123")
         user.save()
-        
+
         # Use 'username' field (maps to mobile_number via USERNAME_FIELD)
         login_data = {
             "mobile_number": "+2399882053",
@@ -82,6 +84,7 @@ class TestCoreViews:
         # Act - Use SimpleJWT's TokenObtainPairView directly
         request = factory.post(url, data=login_data, format="json")
         from rest_framework_simplejwt.views import TokenObtainPairView
+
         view = TokenObtainPairView.as_view()
         response = view(request)
 
@@ -94,14 +97,14 @@ class TestCoreViews:
         # Given
         factory = APIRequestFactory()
         url = reverse("jwt-create")
-        
+
         user = UserFactory(
             mobile_number="+2399882053",
             username="+2399882053",
         )
         user.set_password("securepassword123")
         user.save()
-        
+
         invalid_login_data = {
             "mobile_number": "+2399882053",
             "password": "wrongpassword",
@@ -110,6 +113,7 @@ class TestCoreViews:
         # Act
         request = factory.post(url, data=invalid_login_data, format="json")
         from rest_framework_simplejwt.views import TokenObtainPairView
+
         view = TokenObtainPairView.as_view()
         response = view(request)
 
