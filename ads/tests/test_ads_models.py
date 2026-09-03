@@ -24,15 +24,18 @@ from ads.tests.factories import (
 
 User = get_user_model()
 
+
 class CustomerProfileModelTest(TestCase):
-    
     def test_profile_string_representation(self):
         """Verifies the __str__ method returns the expected format."""
-        #Arrange and #Act
+        # Arrange and #Act
         customer = CustomerProfileFactory.build()
-        #Assert
+        # Assert
         self.assertEqual(str(customer), f"Profile for {customer.user.mobile_number}")
-        self.assertEqual(customer.whatsapp_link, f"https://wa.me/{customer.user.mobile_number}".replace("+",""))
+        self.assertEqual(
+            customer.whatsapp_link,
+            f"https://wa.me/{customer.user.mobile_number}".replace("+", ""),
+        )
 
     def test_whatsapp_link_removes_leading_zero(self):
         """Tests that a leading zero is cleanly removed via removeprefix."""
@@ -54,7 +57,6 @@ class CategoryModelTest(TestCase):
 
 
 class AdModelTest(TestCase):
-    
     def test_default_expiration_date(self):
         """Validates the expiration helper returns a timeframe 7 days away."""
         now = timezone.now()
@@ -67,7 +69,7 @@ class AdModelTest(TestCase):
         """Validates standard defaults such as active status and pricing structures."""
         user = UserFactory(mobile_number="+2399912345")
         customer = CustomerProfileFactory(user=user)
-        ad = AdFactory.build(customer=customer,product_name="Casa de Praia")
+        ad = AdFactory.build(customer=customer, product_name="Casa de Praia")
         self.assertEqual(ad.status, AdStatus.ACTIVE)
         self.assertEqual(ad.condition, AdCondition.NEW)
         self.assertFalse(ad.is_featured)
@@ -82,12 +84,13 @@ class AdModelTest(TestCase):
 
 
 class TemporaryAdModelTest(TestCase):
-    
     def test_transfer_to_official_ad_success(self):
         """Verifies migration paths from guest workflows to formal accounts."""
         # Arrange
         temp_ad = AdTempFactory(product_name="T-Shirt")
-        original_img = TemporaryAdImageFactory(temporary_ad=temp_ad, caption="Front View")
+        original_img = TemporaryAdImageFactory(
+            temporary_ad=temp_ad, caption="Front View"
+        )
         customer = CustomerProfileFactory()
 
         # Act

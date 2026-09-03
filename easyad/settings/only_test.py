@@ -1,10 +1,8 @@
-
-
 from .dev import *
 
-CACHES={
-    'default': {
-        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.dummy.DummyCache",
     }
 }
 
@@ -18,14 +16,7 @@ CACHES["default"]["BACKEND"] = "django.core.cache.backends.locmem.LocMemCache"
 
 WHITENOISE_AUTOREFRESH = True
 
-DATABASE_URL = 'postgresql://postgres:postgres@host.docker.internal:5432/easyaddbtest'
+DATABASE_URL = "postgresql://postgres:postgres@host.docker.internal:5432/easyaddbtest"
 
-DATABASES = {
-    'default': dj_database_url.parse(DATABASE_URL) 
-}
+DATABASES = {"default": dj_database_url.parse(DATABASE_URL)}
 DATABASES["default"]["TEST"] = {"SERIALIZE": False}
-
-
-
-
-

@@ -137,7 +137,7 @@ class Ad(models.Model):
         """
         return timezone.now() >= self.expires_at
 
-    
+
 class AdImage(models.Model):
     """
     Model for storing multiple images per ad.

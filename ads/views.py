@@ -125,7 +125,6 @@ class AdViewViewSet(viewsets.ReadOnlyModelViewSet):
         return super().retrieve(request, *args, **kwargs)
 
 
-
 class AdManageViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     http_method_names = ["post", "get", "put", "patch", "delete"]
@@ -156,7 +155,7 @@ class AdManageViewSet(viewsets.ModelViewSet):
         Returns an empty queryset if the profile does not exist.
         """
         user = self.request.user
-        
+
         # Safe fallback for unauthenticated users (avoids breaking internal DRF engines)
         if not user or user.is_anonymous:
             return Ad.objects.none()
@@ -191,37 +190,45 @@ class AdManageViewSet(viewsets.ModelViewSet):
                 customer = CustomerProfile.objects.get(user=self.request.user)
                 customer_id = customer.id
 
-                @custom_cache_version(f"ads_manage_customer_{customer_id}", timeout=60 * 60)
-                def get_cached_list(inner_self, inner_request, *inner_args, **inner_kwargs):
+                @custom_cache_version(
+                    f"ads_manage_customer_{customer_id}", timeout=60 * 60
+                )
+                def get_cached_list(
+                    inner_self, inner_request, *inner_args, **inner_kwargs
+                ):
                     return super(AdManageViewSet, self).list(request, *args, **kwargs)
 
                 return get_cached_list(self, request, *args, **kwargs)
             except CustomerProfile.DoesNotExist:
-                return Response({"detail": "Customer profile missing."}, status=status.HTTP_403_FORBIDDEN)
+                return Response(
+                    {"detail": "Customer profile missing."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
         return Response(
-            {"detail": "Authentication credentials were not provided."}, 
-            status=status.HTTP_401_UNAUTHORIZED
+            {"detail": "Authentication credentials were not provided."},
+            status=status.HTTP_401_UNAUTHORIZED,
         )
 
     def retrieve(self, request, *args, **kwargs):
         print(f"User: {request.user}")
         print(f"Ad PK: {kwargs.get('pk')}")
-        
+
         try:
             obj = self.get_object()
             print(f"Found object: {obj.id}, customer: {obj.customer.user.id}")
         except Http404:
             print("Http404 raised")
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
-        
+
         print(f"Cache key will be: ads_manage_{obj.id}")
-        
+
         @custom_cache_version(f"ads_manage_{obj.id}", timeout=60 * 60)
         def get_cached_retrieve(inner_self, inner_request, *inner_args, **inner_kwargs):
             return super(AdManageViewSet, self).retrieve(request, *args, **kwargs)
-        
+
         return get_cached_retrieve(self, request, *args, **kwargs)
+
 
 class AdImageViewSet(viewsets.ModelViewSet):
     """

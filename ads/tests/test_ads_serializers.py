@@ -72,7 +72,6 @@ class TemporaryAdImageSerializerTest(TestCase):
 
 
 class AdCreateSerializerValidationTest(TestCase):
-   
     def test_validation_passes_for_complete_draft(self):
         """Ensures fully compliant guest payloads validate successfully."""
 
@@ -95,7 +94,7 @@ class AdCreateSerializerValidationTest(TestCase):
 
     def test_validation_fails_missing_product_name(self):
         """Catches empty records before execution pipelines receive data."""
-        
+
         temp_ad = AdTempFactory(product_name="")
 
         serializer = AdCreateSerializer(data={"temp_ad_id": str(temp_ad.id)})
@@ -107,7 +106,7 @@ class AdCreateSerializerValidationTest(TestCase):
 
     def test_validation_fails_missing_category(self):
         """Enforces schema consistency rules for categorisation systems."""
-        
+
         temp_ad = AdTempFactory(category=None)
 
         serializer = AdCreateSerializer(data={"temp_ad_id": str(temp_ad.id)})
@@ -117,8 +116,8 @@ class AdCreateSerializerValidationTest(TestCase):
 
     def test_validation_fails_invalid_price(self):
         """Blocks zero value setups or missing valuation matrix components."""
-        
-        temp_ad = AdTempFactory(price = Decimal("0.00"))
+
+        temp_ad = AdTempFactory(price=Decimal("0.00"))
 
         serializer = AdCreateSerializer(data={"temp_ad_id": str(temp_ad.id)})
         with self.assertRaises(ValidationError) as context:
@@ -137,7 +136,6 @@ class AdCreateSerializerValidationTest(TestCase):
 
 
 class AdCreateSerializerCreationTest(TestCase):
-    
     def test_create_fails_if_unauthenticated(self):
         """Refuses conversion workflows when context lacks authentication states."""
         factory = APIRequestFactory()
@@ -157,7 +155,7 @@ class AdCreateSerializerCreationTest(TestCase):
         """Fails gracefully if authenticated identity lacks matching application profiles."""
         temp_ad = AdTempFactory()
         TemporaryAdImageFactory(temporary_ad=temp_ad)
-        
+
         serializer = AdCreateSerializer(
             data={"temp_ad_id": str(temp_ad.id)}, context={"customer_id": 99}
         )
