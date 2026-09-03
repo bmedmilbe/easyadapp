@@ -1,8 +1,8 @@
 import pytest
-from core.tests.factories import UserFactory
 from django.core.exceptions import ValidationError
 
 from core.models import User
+from core.tests.factories import UserFactory
 
 
 @pytest.mark.django_db
