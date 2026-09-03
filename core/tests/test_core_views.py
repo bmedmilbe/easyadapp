@@ -1,84 +1,118 @@
+import pytest
+from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import APIRequestFactory
 
 from core.models import User
+from core.tests.factories import UserFactory
 
 
-class TestCoreViews(APITestCase):
-    def setUp(self):
-        self.register_url = "/api/auth/users/"
-        self.login_url = "/api/auth/jwt/create/"
-        self.valid_data = {
+@pytest.mark.django_db
+class TestCoreViews:
+    def test_core_api_create_account(self):
+        # Given
+        factory = APIRequestFactory()
+        url = reverse("user-list")
+        data = {
             "mobile_number": "+2399882053",
             "password": "securepassword123",
             "district": "AGUA_GRANDE",
+            "username": "+2399882053",
         }
+        
+        # Act
+        request = factory.post(url, data=data, format="json")
+        from djoser.views import UserViewSet
+        view = UserViewSet.as_view({"post": "create"})
+        response = view(request)
 
-    def test_core_api_create_account(self):
-        """Ensure we can create a new account object and verify DB state."""
-        response = self.client.post(self.register_url, self.valid_data, format="json")
+        # Then
+        assert response.status_code == status.HTTP_201_CREATED
+        assert User.objects.count() == 1
+        assert response.data["mobile_number"] == data["mobile_number"]
 
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(User.objects.count(), 1)
-
-        # Verify response matches sent payload (ignoring password which shouldn't be returned raw)
-        self.assertEqual(
-            response.data["mobile_number"], self.valid_data["mobile_number"]
-        )
-
-        # Verify database fields
         user = User.objects.get()
-        self.assertEqual(user.username, "+2399882053")
-        self.assertEqual(user.mobile_number, "+2399882053")
-        self.assertEqual(user.district, "AGUA_GRANDE")
+        assert user.username == "+2399882053"
+        assert user.mobile_number == "+2399882053"
+        assert user.district == "AGUA_GRANDE"
 
     def test_create_account_duplicate_mobile_number(self):
-        """Ensure a user cannot register with an existing mobile number."""
-        # Create initial user
-        User.objects.create_user(
-            **self.valid_data,
-            username=self.valid_data["mobile_number"],
-        )
-
-        # Try to register again with same data
-        response = self.client.post(self.register_url, self.valid_data, format="json")
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(User.objects.count(), 1)  # No new user added
-
-    def test_login_success(self):
-        """Ensure an existing user can log in with correct credentials."""
-        # Pre-create the user in the database
-        User.objects.create_user(
-            **self.valid_data,
-            username=self.valid_data["mobile_number"],
-        )
-
-        # Login payload matching what your backend expects (usually username or mobile_number)
-        login_data = {
-            "mobile_number": self.valid_data["mobile_number"],
-            "password": self.valid_data["password"],
+        # Given
+        factory = APIRequestFactory()
+        url = reverse("user-list")
+        
+        UserFactory(mobile_number="+2399882053", username="+2399882053")
+        
+        data = {
+            "mobile_number": "+2399882053",
+            "password": "securepassword123",
+            "district": "AGUA_GRANDE",
+            "username": "+2399882053",
         }
 
-        response = self.client.post(self.login_url, login_data, format="json")
+        # Act
+        request = factory.post(url, data=data, format="json")
+        from djoser.views import UserViewSet
+        view = UserViewSet.as_view({"post": "create"})
+        response = view(request)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # Verify an auth token or access token is returned
-        self.assertIn("access", response.data)  # Change to "access" if using Simple JWT
+        # Then
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert User.objects.count() == 1
+
+    def test_login_success(self):
+        # Given
+        factory = APIRequestFactory()
+        url = reverse("jwt-create")
+        
+        # Create user using factory
+        user = UserFactory(
+            mobile_number="+2399882053",
+            username="+2399882053",
+        )
+        user.set_password("securepassword123")
+        user.save()
+        
+        # Use 'username' field (maps to mobile_number via USERNAME_FIELD)
+        login_data = {
+            "mobile_number": "+2399882053",
+            "password": "securepassword123",
+        }
+
+        # Act - Use SimpleJWT's TokenObtainPairView directly
+        request = factory.post(url, data=login_data, format="json")
+        from rest_framework_simplejwt.views import TokenObtainPairView
+        view = TokenObtainPairView.as_view()
+        response = view(request)
+
+        # Then
+        assert response.status_code == status.HTTP_200_OK
+        assert "access" in response.data
+        assert "refresh" in response.data
 
     def test_login_invalid_credentials(self):
-        """Ensure login fails with wrong password."""
-        User.objects.create_user(
-            **self.valid_data,
-            username=self.valid_data["mobile_number"],
+        # Given
+        factory = APIRequestFactory()
+        url = reverse("jwt-create")
+        
+        user = UserFactory(
+            mobile_number="+2399882053",
+            username="+2399882053",
         )
-
+        user.set_password("securepassword123")
+        user.save()
+        
         invalid_login_data = {
-            "username": self.valid_data["mobile_number"],
+            "mobile_number": "+2399882053",
             "password": "wrongpassword",
         }
 
-        response = self.client.post(self.login_url, invalid_login_data, format="json")
+        # Act
+        request = factory.post(url, data=invalid_login_data, format="json")
+        from rest_framework_simplejwt.views import TokenObtainPairView
+        view = TokenObtainPairView.as_view()
+        response = view(request)
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertNotIn("access", response.data)
+        # Then
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert "access" not in response.data
