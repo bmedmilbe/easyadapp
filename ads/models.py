@@ -2,22 +2,90 @@ import uuid
 from datetime import timedelta
 
 from django.conf import settings
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
+# ---------------------------------------------------------------------------
+# Custom Managers with select_related / prefetch_related
+# ---------------------------------------------------------------------------
+
+class CustomerProfileManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().select_related("user")
+
+
+class CategoryManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().select_related("parent")
+
+
+class ProductManager(models.Manager):
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .select_related("category", "supplier")
+            .prefetch_related("images")
+        )
+
+
+class SupplierManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().select_related("pickup_location")
+
+
+class PickupLocationManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().select_related("supplier")
+
+
+class OrderManager(models.Manager):
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .select_related("customer__user", "delivery_location")
+            .prefetch_related("items__product")
+        )
+
+
+class OrderItemManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().select_related("order", "product", "supplier")
+
+
+# ---------------------------------------------------------------------------
+# Customer
+# ---------------------------------------------------------------------------
 
 class CustomerProfile(models.Model):
     """
-    Customer profile model that links to the user model via OneToOneField.
-    This is the ONLY model that directly links to the user model.
+    Customer profile linked to the user model.
+    Customers specify where they want their order delivered.
     """
 
     user = models.OneToOneField(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="profile",
+    )
+    # Default delivery address for this customer
+    default_delivery_address = models.TextField(
+        blank=True,
+        help_text="Where the customer wants to receive their products.",
+    )
+    default_delivery_location = models.ForeignKey(
+        "DeliveryLocation",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="default_for_customers",
+        help_text="Preferred delivery zone/point for this customer.",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = CustomerProfileManager()
 
     class Meta:
         verbose_name = "Customer Profile"
@@ -28,20 +96,101 @@ class CustomerProfile(models.Model):
 
     @property
     def whatsapp_link(self):
-        """
-        Returns a sanitized WhatsApp link for the user's mobile number.
-        """
         if not self.user.mobile_number:
             return "#"
-
-        # Remove any non-numeric characters from the mobile number
         clean_number = "".join(filter(str.isdigit, self.user.mobile_number))
-
-        # Remove any leading zeros or country code indicators
         clean_number = clean_number.removeprefix("0")
-
         return f"https://wa.me/{clean_number}"
 
+
+# ---------------------------------------------------------------------------
+# Geography / Locations
+# ---------------------------------------------------------------------------
+
+class DeliveryLocation(models.Model):
+    """
+    A place where customers can receive their orders.
+    Could be a neighborhood, town, or specific meeting point in São Tomé.
+    """
+
+    name = models.CharField(max_length=150, unique=True)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+
+    objects = models.Manager()
+
+    class Meta:
+        verbose_name = "Delivery Location"
+        verbose_name_plural = "Delivery Locations"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class PickupLocation(models.Model):
+    """
+    A place where suppliers deliver goods, chosen to be closest to each supplier.
+    We collect goods from these locations.
+    """
+
+    name = models.CharField(max_length=150, unique=True)
+    address = models.TextField(blank=True)
+    notes = models.TextField(blank=True, help_text="Access notes, hours, contact person.")
+    is_active = models.BooleanField(default=True)
+
+    objects = PickupLocationManager()
+
+    class Meta:
+        verbose_name = "Pickup Location"
+        verbose_name_plural = "Pickup Locations"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+# ---------------------------------------------------------------------------
+# Suppliers
+# ---------------------------------------------------------------------------
+
+class Supplier(models.Model):
+    """
+    A supplier of São Tomé products (mango, cajamanga, safu, maracujá, etc.).
+    Each supplier is assigned to the pickup location closest to them.
+    """
+
+    name = models.CharField(max_length=200)
+    contact_name = models.CharField(max_length=150, blank=True)
+    mobile_number = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(blank=True)
+    pickup_location = models.ForeignKey(
+        PickupLocation,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="suppliers",
+        help_text="The pickup spot closest to this supplier.",
+    )
+    notes = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = SupplierManager()
+
+    class Meta:
+        verbose_name = "Supplier"
+        verbose_name_plural = "Suppliers"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+# ---------------------------------------------------------------------------
+# Categories & Products
+# ---------------------------------------------------------------------------
 
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -59,6 +208,8 @@ class Category(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
+    objects = CategoryManager()
+
     class Meta:
         verbose_name = "Category"
         verbose_name_plural = "Categories"
@@ -68,188 +219,193 @@ class Category(models.Model):
         return f"{self.icon or '📁'} {self.name}"
 
 
-class AdStatus(models.TextChoices):
-    ACTIVE = "ACTIVE", "Active"
-    SUSPENDED = "SUSPENDED", "Suspended"
-    EXPIRED = "EXPIRED", "Expired"
+class Product(models.Model):
+    """
+    A product sourced from São Tomé (mango, cajamanga, safu, maracujá, etc.).
+    Stock is tracked per supplier; we collect from pickup locations.
+    """
+
+    class Unit(models.TextChoices):
+        KG = "KG", "Quilograma"
+        UNIT = "UNIT", "Unidade"
+        BUNCH = "BUNCH", "Molho"
+        BOX = "BOX", "Caixa"
+
+    category = models.ForeignKey(
+        Category, on_delete=models.SET_NULL, null=True, related_name="products"
+    )
+    supplier = models.ForeignKey(
+        Supplier, on_delete=models.SET_NULL, null=True, related_name="products"
+    )
+    name = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=200, unique=True)
+    description = models.TextField(blank=True)
+    unit = models.CharField(
+        max_length=10, choices=Unit.choices, default=Unit.KG
+    )
+    price_per_unit = models.DecimalField(max_digits=10, decimal_places=2)
+    stock_quantity = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0,
+        help_text="Available quantity at the supplier / pickup location.",
+    )
+    is_available = models.BooleanField(default=True)
+    is_featured = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = ProductManager()
+
+    class Meta:
+        verbose_name = "Product"
+        verbose_name_plural = "Products"
+        ordering = ["-is_featured", "name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.get_unit_display()})"
 
 
-class AdCondition(models.TextChoices):
-    NEW = "NEW", "Novo"
-    USED = "USED", "Usado"
-    IMPORTED = "IMPORTED", "Importado"
-    LOCAL = "LOCAL", "Produzido em São Tomé"
+class ProductImage(models.Model):
+    """
+    Multiple images per product.
+    """
+
+    product = models.ForeignKey(
+        Product, on_delete=models.CASCADE, related_name="images"
+    )
+    image = models.ImageField(upload_to="products/images/")
+    api_image_webp = models.ImageField(
+        upload_to="products/images_webp/", blank=True, null=True
+    )
+    caption = models.CharField(max_length=200, blank=True)
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Product Image"
+        verbose_name_plural = "Product Images"
+        ordering = ["order", "created_at"]
+
+    def __str__(self):
+        return f"Image for {self.product.name}"
+
+
+# ---------------------------------------------------------------------------
+# Orders & Payment
+# ---------------------------------------------------------------------------
+
+class OrderStatus(models.TextChoices):
+    PENDING_PAYMENT = "PENDING_PAYMENT", "Aguardando Pagamento"
+    PAYMENT_VERIFIED = "PAYMENT_VERIFIED", "Pagamento Verificado"
+    COLLECTING = "COLLECTING", "Em Recolha nos Fornecedores"
+    READY_FOR_DELIVERY = "READY_FOR_DELIVERY", "Pronto para Entrega"
+    OUT_FOR_DELIVERY = "OUT_FOR_DELIVERY", "Em Rota de Entrega"
+    DELIVERED = "DELIVERED", "Entregue"
+    CANCELLED = "CANCELLED", "Cancelado"
 
 
 def default_expiration_date():
-    """
-    Returns a datetime 7 days from now.
-    """
-    return timezone.now() + timedelta(days=7)
+    return timezone.now() + timedelta(days=3)
 
 
-class Ad(models.Model):
+class Order(models.Model):
     """
-    Main ad model that links to CustomerProfile (not directly to User).
-    All ads are free and active by default.
+    A customer order. Payment is made via bank transfer; the customer
+    includes the order number in the transfer reference. We verify with
+    the bank before releasing the order.
     """
 
+    order_number = models.CharField(max_length=20, unique=True, editable=False)
     customer = models.ForeignKey(
-        CustomerProfile, on_delete=models.CASCADE, related_name="ads"
+        CustomerProfile, on_delete=models.PROTECT, related_name="orders"
     )
-    category = models.ForeignKey(
-        Category, on_delete=models.SET_NULL, null=True, related_name="ads"
+    delivery_location = models.ForeignKey(
+        DeliveryLocation,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orders",
     )
-    condition = models.CharField(
-        max_length=20,
-        choices=AdCondition.choices,
-        default=AdCondition.NEW,
-        verbose_name="Condição do Produto",
+    delivery_address = models.TextField(
+        help_text="Where the customer wants to receive the products."
     )
-    product_name = models.CharField(max_length=200)
-    description = models.TextField(blank=True)
-    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-
-    # Status and expiration
     status = models.CharField(
-        max_length=20, choices=AdStatus.choices, default=AdStatus.ACTIVE
+        max_length=30, choices=OrderStatus.choices,
+        default=OrderStatus.PENDING_PAYMENT,
     )
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    # Bank transfer / payment verification
+    transfer_reference = models.CharField(
+        max_length=100, blank=True,
+        help_text="Reference used by the customer in the bank transfer.",
+    )
+    payment_verified_at = models.DateTimeField(null=True, blank=True)
+    payment_verified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="verified_orders",
+    )
+
+    # Fulfillment timestamps
     expires_at = models.DateTimeField(default=default_expiration_date)
-
-    # Premium flag for featured listings
-    is_featured = models.BooleanField(default=False)
-
-    # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta:
-        verbose_name = "Ad"
-        verbose_name_plural = "Ads"
-        ordering = ["-is_featured", "-created_at"]  # Featured ads float to top
-
-    def __str__(self):
-        return f"{self.product_name} - {self.customer.user.mobile_number}"
-
-    def is_expired(self):
-        """
-        Check if the ad has expired.
-        """
-        return timezone.now() >= self.expires_at
-
-
-class AdImage(models.Model):
-    """
-    Model for storing multiple images per ad.
-    """
-
-    ad = models.ForeignKey(Ad, on_delete=models.CASCADE, related_name="images")
-    image = models.ImageField(upload_to="ads/ad_images/")
-    api_image_webp = models.ImageField(
-        upload_to="ads/ad_images_webp/", blank=True, null=True
-    )
-    caption = models.CharField(max_length=200, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    order = models.PositiveIntegerField(default=0)
+    objects = OrderManager()
 
     class Meta:
-        verbose_name = "Ad Image"
-        verbose_name_plural = "Ad Images"
-        ordering = ["order", "created_at"]
-
-    def __str__(self):
-        return f"Image for {self.ad.product_name}"
-
-
-class TemporaryAd(models.Model):
-    """
-    Temporary draft holding station for non-authenticated users.
-    No relationship to User or CustomerProfile.
-    """
-
-    id = models.UUIDField(default=uuid.uuid4, unique=True, primary_key=True)
-
-    category = models.ForeignKey(
-        Category, on_delete=models.SET_NULL, null=True, related_name="temporary_ads"
-    )
-    product_name = models.CharField(max_length=200, null=True)
-    description = models.TextField(blank=True, null=True)
-    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-
-    # Metadata
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = "Temporary Ad"
-        verbose_name_plural = "Temporary Ads"
+        verbose_name = "Order"
+        verbose_name_plural = "Orders"
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"Temporary: {self.product_name} ({self.session_token})"
+        return f"Order {self.order_number} - {self.customer.user.mobile_number}"
 
-    def transfer_to_official_ad(self, customer_profile):
-        """
-        Transfer the temporary ad to an official production Ad record.
+    def save(self, *args, **kwargs):
+        if not self.order_number:
+            # Simple sequential-ish order number; adjust as needed.
+            self.order_number = f"STP-{timezone.now():%Y%m%d}-{uuid.uuid4().hex[:6].upper()}"
+        super().save(*args, **kwargs)
 
-        Args:
-            customer_profile: The CustomerProfile instance to associate the new ad with.
+    def is_expired(self):
+        return timezone.now() >= self.expires_at
 
-        Returns:
-            Ad: The newly created official ad.
-        """
-        if not customer_profile or not isinstance(customer_profile, CustomerProfile):
-            raise ValidationError("A valid CustomerProfile is required.")
-
-        # Create the official ad
-        official_ad = Ad.objects.create(
-            customer=customer_profile,
-            category=self.category,
-            product_name=self.product_name,
-            description=self.description,
-            price=self.price,
-            status=AdStatus.ACTIVE,  # Active by default
-            is_featured=False,  # Not featured by default
-        )
-
-        # Migrate all related temporary images to the official ad
-        temp_images = self.temporary_images.all()
-        for temp_image in temp_images:
-            AdImage.objects.create(
-                ad=official_ad,
-                image=temp_image.image,
-                api_image_webp=temp_image.api_image_webp,
-                caption=temp_image.caption,
-                order=temp_image.order,
-            )
-
-        # Delete the temporary ad and its images
-        self.delete()
-
-        return official_ad
+    def recalculate_total(self):
+        total = sum(item.subtotal for item in self.items.all())
+        self.total_amount = total
+        self.save(update_fields=["total_amount"])
+        return total
 
 
-class TemporaryAdImage(models.Model):
+class OrderItem(models.Model):
     """
-    Model for storing multiple images per temporary ad.
+    A line item in an order. Links to a product and its supplier so we know
+    which pickup location to collect from.
     """
 
-    temporary_ad = models.ForeignKey(
-        TemporaryAd, on_delete=models.CASCADE, related_name="temporary_images"
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
+    product = models.ForeignKey(
+        Product, on_delete=models.PROTECT, related_name="order_items"
     )
-    image = models.ImageField(upload_to="ads/temp_ad_images/")
-    api_image_webp = models.ImageField(
-        upload_to="ads/temp_ad_images_webp/", blank=True, null=True
+    supplier = models.ForeignKey(
+        Supplier, on_delete=models.PROTECT, related_name="order_items"
     )
+    quantity = models.DecimalField(max_digits=10, decimal_places=2)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
-    caption = models.CharField(max_length=200, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    order = models.PositiveIntegerField(default=0)
+    objects = OrderItemManager()
 
     class Meta:
-        verbose_name = "Temporary Ad Image"
-        verbose_name_plural = "Temporary Ad Images"
-        ordering = ["order", "created_at"]
+        verbose_name = "Order Item"
+        verbose_name_plural = "Order Items"
+        ordering = ["order", "product__name"]
 
     def __str__(self):
-        return f"Temp Image for {self.temporary_ad.product_name}"
+        return f"{self.quantity} x {self.product.name} (Order {self.order.order_number})"
+
+    def save(self, *args, **kwargs):
+        self.subtotal = self.quantity * self.unit_price
+        super().save(*args, **kwargs)
