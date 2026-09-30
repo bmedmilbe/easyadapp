@@ -29,10 +29,10 @@ pytest-django = "*"
 pytest-cov = "*"
 dj-inmemorystorage = "*"
 pytest-xdist = "*"
+pytest = "*"
 factory-boy = "*"
 faker = "*"
 ruff = "*"
-pytest = "*"
 
 [requires]
 python_version = "3.10"
