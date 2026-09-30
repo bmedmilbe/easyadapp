@@ -60,7 +60,11 @@ dev.py
 *data/
 .dockerignore
 .env.txt
-
-staticfiles/
-media/
+**/static/
+**/staticfiles/
+**/media/
+easyad/static/
+easyad/staticfiles/
+easyad/media/
+staticfiles.json
 temp_ad_images/temp_ad_images/
