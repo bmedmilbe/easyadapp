@@ -14,11 +14,13 @@ RUN apt-get update && apt-get install -y \
 # 2. Upgrade pip to ensure the best compatibility with pre-built wheels
 RUN pip install --no-cache-dir --upgrade pip pipenv
 
-COPY Pipfile Pipfile.lock ./
+COPY ./adapp/Pipfile ./adapp/Pipfile.lock ./
 
 RUN pipenv install --system --deploy
 
-COPY . .
+COPY ./adapp/. .
+
+RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
 
