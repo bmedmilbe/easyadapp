@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN pip install --no-cache-dir --upgrade pip pipenv
 
-COPY Pipfile Pipfile.lock ./
+COPY ./adapp/Pipfile ./adapp/Pipfile.lock ./
 
 # Install packages globally in the builder stage
 RUN pipenv install --system --deploy
@@ -49,7 +49,7 @@ COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy project files
-COPY . .
+COPY ./adapp/. .
 
 # Prepare static files directory and compile assets
 RUN mkdir -p /app/easyad/staticfiles

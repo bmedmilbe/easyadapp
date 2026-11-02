@@ -36,7 +36,7 @@ jobs:
           docker build \
             --cache-from $IMAGE:latest \
             --tag $IMAGE:latest \
-            --file ./Dockerfile.prod \
+            --file ./adapp/Dockerfile.prod \
             "."
           docker push $IMAGE:latest
 

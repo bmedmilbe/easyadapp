@@ -68,3 +68,5 @@ easyad/staticfiles/
 easyad/media/
 staticfiles.json
 temp_ad_images/temp_ad_images/
+ci-explanations.txt
+docker-compose.yml
