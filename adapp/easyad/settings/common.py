@@ -161,10 +161,10 @@ SIMPLE_JWT = {
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://easyadr:6379/0",
+        "LOCATION": "redis://redis:6379/0",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
     }
 }
-CELERY_BROKER_URL = "redis://easyadr:6379/1"
+CELERY_BROKER_URL = "redis://redis:6379/1"

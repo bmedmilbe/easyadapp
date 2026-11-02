@@ -70,3 +70,5 @@ staticfiles.json
 temp_ad_images/temp_ad_images/
 ci-explanations.txt
 docker-compose.yml
+nginx/default.dev.conf
+nginx/Dockerfile.dev
