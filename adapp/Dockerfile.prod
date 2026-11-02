@@ -51,6 +51,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # Copy project files
 COPY ./adapp/. .
 
+RUN mkdir -p /app/easyad/staticfiles/
 
 RUN adduser --disabled-password myuser
 
