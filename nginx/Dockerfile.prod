@@ -29,6 +29,6 @@ COPY ./nginx/defaultpro.conf /etc/nginx/templates/default.conf.template
 
 COPY --from=asset-compiler /build/easyad/staticfiles/ /home/easyad/staticfiles/
 
-EXPOSE 8080
+EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]
