@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN pip install --no-cache-dir --upgrade pip pipenv
 
-COPY Pipfile Pipfile.lock ./
+COPY ./adapp/Pipfile ./adapp/Pipfile.lock ./
 
 # Install packages globally in the builder stage
 RUN pipenv install --system --deploy
